@@ -74,9 +74,6 @@ try {
         # Coordinates that changed in this stack and are commonly mis-remembered.
         @{ Pattern = '<artifactId>spring-cloud-starter-gateway</artifactId>';
            Reason = 'renamed: use spring-cloud-starter-gateway-server-webmvc (or -webflux)' }
-        @{ Pattern = '<artifactId>(postgresql|kafka|junit-jupiter)</artifactId>';
-           Reason = 'Testcontainers 2.x prefixes modules: testcontainers-postgresql etc. (only if groupId is org.testcontainers)';
-           Ext = 'pom\.xml$' }
 
         # Schema ownership and config hygiene.
         @{ Pattern = 'ddl-auto:\s*(update|create|create-drop)';
@@ -137,6 +134,24 @@ try {
         }
         elseif (-not $line.StartsWith('-')) {
             $newLineNo++
+        }
+    }
+
+    # --- 3. Testcontainers 2.x module names, checked per dependency --------------------
+    # This has to be a file-level check: a bare <artifactId> line carries no groupId, so a
+    # line-level rule cannot tell org.testcontainers:postgresql (wrong) from
+    # org.postgresql:postgresql (the JDBC driver, correct).
+    $poms = @(& git ls-files 'pom.xml' '**/pom.xml' 2>$null) +
+            @(& git ls-files --others --exclude-standard 2>$null | Where-Object { $_ -match 'pom\.xml$' })
+    foreach ($pom in ($poms | Sort-Object -Unique)) {
+        if (-not $pom -or -not (Test-Path -LiteralPath $pom)) { continue }
+        try { [xml] $doc = Get-Content -LiteralPath $pom -Raw } catch { continue }
+        foreach ($dep in $doc.GetElementsByTagName('dependency')) {
+            if ($dep.groupId -ne 'org.testcontainers') { continue }
+            $aid = [string] $dep.artifactId
+            if ($aid -and $aid -ne 'testcontainers' -and -not $aid.StartsWith('testcontainers-')) {
+                $findings.Add("${pom}: org.testcontainers:$aid - Testcontainers 2.x prefixes modules, use testcontainers-$aid")
+            }
         }
     }
 

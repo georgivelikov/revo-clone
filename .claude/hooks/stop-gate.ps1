@@ -89,7 +89,19 @@ genuinely wrong, fix the test and say so in the commit body.
 $output
 "@
 
+# Both forms are emitted deliberately.
+#
+# The flat top-level decision/reason pair is the one that ACTUALLY blocks in Claude Code
+# v2.1.261 -- verified by probe. The nested hookSpecificOutput form is what the current
+# hooks documentation specifies; emitted on its own it is accepted and then ignored, and the
+# turn ends on a red build. Both are valid fields of the same hook output object, so sending
+# both blocks today and stays correct if the documented form starts being honored.
+#
+# If you ever change this, re-run the probe. A gate that emits a block nobody honors looks
+# exactly like a working gate in the logs.
 @{
+    decision           = 'block'
+    reason             = $reason
     hookSpecificOutput = @{
         hookEventName = 'Stop'
         decision      = 'block'
