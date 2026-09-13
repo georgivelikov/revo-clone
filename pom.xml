@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.revolutclone</groupId>
+  <artifactId>revolut-clone</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Revolut Clone</name>
+  <description>
+    A Revolut-style neobank built to practise distributed-systems engineering: the
+    double-entry ledger, event-driven choreography over Kafka, sagas with compensation,
+    idempotency under retries, and a UX that makes eventual consistency visible.
+  </description>
+
+  <properties>
+    <java.version>25</java.version>
+    <spring-cloud.version>2025.1.3</spring-cloud.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Spring Cloud 2025.1.3 is the floor for Boot 4.1 compatibility; see
+           docs/spring-boot-4-notes.md for why 2025.1.0/.1 are excluded. -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <!-- No <modules> yet: platform/ and services/ aggregators land in task 00.3.
+       This root pom must stay buildable as a plain parent POM until they exist. -->
+
+</project>
