@@ -42,7 +42,9 @@
     </dependencies>
   </dependencyManagement>
 
-  <!-- No <modules> yet: platform/ and services/ aggregators land in task 00.3.
-       This root pom must stay buildable as a plain parent POM until they exist. -->
+  <modules>
+    <module>platform</module>
+    <module>services</module>
+  </modules>
 
 </project>

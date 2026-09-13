@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.revolutclone</groupId>
+    <artifactId>revolut-clone</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>platform</artifactId>
+  <packaging>pom</packaging>
+
+  <name>Revolut Clone :: Platform</name>
+  <description>
+    Aggregator for the shared libraries every service depends on: common-money, contracts,
+    common-messaging, common-web, common-security. No business logic lives here.
+  </description>
+
+  <!-- No <modules> yet: common-money, contracts, common-messaging, common-web and
+       common-security land in later Phase 00 tasks. -->
+
+</project>
