@@ -52,22 +52,30 @@ try {
     # A 'verify' task (e.g. a toolchain check) legitimately produces no diff.
     $base = $null
     try { $base = (& git merge-base master HEAD 2>$null | Select-Object -First 1) } catch { }
-    $statArgs = if ($base) { @('diff', '--stat', $base) } else { @('diff', '--stat', 'HEAD') }
-    $stat = (& git @statArgs 2>$null | Out-String).Trim()
+    # Harness bookkeeping must not count as the agent's work. run.ps1 writes state.json
+    # (status -> in_progress) BEFORE launching claude, so counting it would make check 1
+    # pass even when the agent did nothing at all.
+    $bookkeeping = '^(agent/state\.json|agent/log/|agent/harness-settings\.json)'
+
+    $nameArgs = if ($base) { @('diff', '--name-only', $base) } else { @('diff', '--name-only', 'HEAD') }
+    $changed = @(& git @nameArgs 2>$null | Where-Object { $_ -and $_ -notmatch $bookkeeping })
 
     # Untracked files are in no diff, so count them too - otherwise a task whose whole
     # output is new files reads as "did nothing".
-    $untrackedCount = @(& git ls-files --others --exclude-standard 2>$null |
-                          Where-Object { $_ -and $_ -notmatch '[\/]target[\/]' }).Count
-    if (-not $stat -and $untrackedCount -gt 0) { $stat = "$untrackedCount new untracked file(s)" }
+    $untracked = @(& git ls-files --others --exclude-standard 2>$null |
+                     Where-Object { $_ -and $_ -notmatch '[\/]target[\/]' -and $_ -notmatch $bookkeeping })
+
+    $stat = ''
+    if ($changed.Count -gt 0 -or $untracked.Count -gt 0) {
+        $stat = "$($changed.Count) changed, $($untracked.Count) new file(s)"
+    }
 
     if ($taskKind -eq 'verify') {
         Pass "check 1 diff: skipped (task kind 'verify')"
     } elseif (-not $stat) {
         Fail 'check 1 diff: no changes at all - the task produced nothing'
     } else {
-        $lastLine = ($stat -split "`n")[-1].Trim()
-        Pass "check 1 diff: $lastLine"
+        Pass "check 1 diff: $stat"
     }
 
     # --- 2. tripwire ------------------------------------------------------------------
@@ -128,9 +136,9 @@ try {
     if (-not $task) {
         Write-Output '  n/a   check 4 named tests: no -TaskId given'
     } elseif (-not $task.tests -or @($task.tests).Count -eq 0) {
-        # Phases 07-09 declare no Tests table, so there is nothing to assert there. The
-        # baseline in check 5 is what covers those tasks against regression.
-        Write-Output '  n/a   check 4 named tests: task declares none (phases 07-09 have no Tests table)'
+        # Many tasks create no test of their own, and phases 07-09 declare no Tests table at
+        # all. The baseline in check 5 is what covers these against regression.
+        Write-Output '  n/a   check 4 named tests: this task declares none'
     } else {
         foreach ($name in $task.tests) {
             $src = Get-ChildItem -Path $repo -Recurse -File -Filter "$name.java" -ErrorAction SilentlyContinue |

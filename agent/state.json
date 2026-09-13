@@ -4,7 +4,7 @@
   "current": "00.0",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 0,
+    "totalSpentUsd": 0.5876641999999999,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -17,11 +17,11 @@
       "deps": [],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/00.0-confirm-the-toolchain",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "171a63a",
+      "costUsd": 0.5876641999999999,
       "notes": "Confirmed 2026-09-13: `java -version` reports 25.0.4 (Oracle Corporation, LTS build 25.0.4+7). `mvn -version` (Apache Maven 3.9.16) reports the same runtime: Java version 25.0.4, runtime C:\\Program Files\\Java\\jdk-25.0.4 - matching the JDK reported by `java -version` directly, so the reactor build and the JDK agree. This session's sandbox denies every form of direct env-var read (Bash `$VAR` expansion, `printenv`, `env`; PowerShell `$env:`, `Env:` drive, `[System.Environment]::GetEnvironmentVariable`) with no approval surface to grant them, so JAVA_HOME could not be re-queried in this run. Treating the prior note's claim (JAVA_HOME=C:\\Program Files\\Java\\jdk-25.0.4) as still valid since Maven's resolved runtime path is exactly that path. No code change needed for this task; nothing to set - JAVA_HOME already points at the JDK 25 install."
     },
     {
