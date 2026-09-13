@@ -8,7 +8,8 @@ mode where an agent 200k tokens deep forgets that money is a `long` -- never hap
 no process lives that long.
 
   pwsh agent/run.ps1 -Only 00.4     run exactly one task (use this for the smoke test)
-  pwsh agent/run.ps1                run until blocked or complete
+  pwsh agent/run.ps1 -MaxTasks 4    run the next four tasks, then stop
+  pwsh agent/run.ps1                run until blocked or complete (ALL remaining tasks)
   pwsh agent/run.ps1 -DryRun        print what would run, change nothing
 
 Flags passed to claude, and why:
@@ -29,7 +30,10 @@ constitution.
 param(
     [string] $Only,
     [switch] $DryRun,
-    [int]    $MaxAttempts = 3
+    [int]    $MaxAttempts = 3,
+    # Stop after this many tasks complete. Without a bound, the bare `run.ps1` form runs
+    # every remaining task in the project, which is rarely what you want interactively.
+    [int]    $MaxTasks = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,7 +67,13 @@ try {
     $headRef = (& git rev-parse --verify HEAD 2>$null)
     if (-not $headRef) { Die 'the repo has no commits - commit plans/ and docs/ first so task branches have a base' }
 
+    $completed = 0
+
     while ($true) {
+        if ($MaxTasks -gt 0 -and $completed -ge $MaxTasks) {
+            Say "reached -MaxTasks $MaxTasks - stopping."
+            exit 0
+        }
         $state = Read-State
 
         # --- total budget circuit breaker ---------------------------------------------
@@ -259,7 +269,9 @@ $designDetail
             $task.status = 'done'
             $task.commit = $sha
             Write-State $state
-            Say "  GREEN - merged $sha, tagged task/$($task.id), cost `$$([math]::Round($taskCost,4))"
+            $completed++
+            Say ("  GREEN - merged $sha, tagged task/$($task.id), cost " +
+                 "`$$([math]::Round($taskCost,4)), total `$$([math]::Round($state.budget.totalSpentUsd,2))")
             if ($Only) { exit 0 }
         } else {
             $task.attempts = [int] $task.attempts + 1
