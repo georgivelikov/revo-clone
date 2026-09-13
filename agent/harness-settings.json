@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "//": "Loaded ONLY by agent/run.ps1 via `claude --settings agent/harness-settings.json`. These rules must never live in .claude/settings.json: the Stop gate would trap interactive sessions, and the deny rules would stop a human maintaining the harness.",
+
+  "permissions": {
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(git rebase:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker volume prune:*)",
+      "Bash(rm -rf:*)",
+
+      "Write(./plans/**)",
+      "Edit(./plans/**)",
+      "Write(./.claude/**)",
+      "Edit(./.claude/**)",
+      "Write(./CLAUDE.md)",
+      "Edit(./CLAUDE.md)",
+      "Write(./docs/architecture.md)",
+      "Edit(./docs/architecture.md)",
+      "Write(./agent/PLAN.md)",
+      "Edit(./agent/PLAN.md)",
+      "Write(./agent/gate.ps1)",
+      "Edit(./agent/gate.ps1)",
+      "Write(./agent/tripwire.ps1)",
+      "Edit(./agent/tripwire.ps1)",
+      "Write(./agent/run.ps1)",
+      "Edit(./agent/run.ps1)",
+      "Write(./agent/harness-settings.json)",
+      "Edit(./agent/harness-settings.json)"
+    ]
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy", "Bypass",
+              "-File", "${CLAUDE_PROJECT_DIR}/.claude/hooks/deny-bash.ps1"
+            ],
+            "timeout": 20,
+            "statusMessage": "Checking command against harness denylist"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy", "Bypass",
+              "-File", "${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-gate.ps1"
+            ],
+            "timeout": 1800,
+            "statusMessage": "Running agent/gate.ps1"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,2124 @@
+{
+  "generatedAt": "2026-09-13",
+  "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
+  "current": "00.0",
+  "budget": {
+    "perTaskCeilingUsd": 12.0,
+    "totalSpentUsd": 0,
+    "totalCeilingUsd": 400.0
+  },
+  "tasks": [
+    {
+      "id": "00.0",
+      "phase": "phase-00-foundations.md",
+      "title": "**Confirm the toolchain.** `java -version` reports 25, `mvn -version` reports the same JDK, and `JAVA_HOME` points at it. That last part is the one to actually do — `JAVA_HOME` is currently unset. Maven finds the JDK via `PATH` so the reactor builds either way, but IDE run configurations and some Maven plugins read `JAVA_HOME` directly, and an unset value produces failures that look like anything except a JDK problem.",
+      "kind": "verify",
+      "model": "sonnet",
+      "deps": [],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.0-confirm-the-toolchain",
+      "commit": null,
+      "costUsd": 0,
+      "notes": "Already satisfied as of 2026-09-13: JAVA_HOME=C:\\Program Files\\Java\\jdk-25.0.4 and mvn -version reports Java 25.0.4. The phase text saying JAVA_HOME is unset is stale. Confirm and report; do not try to set a user environment variable - that is outside the allowlist."
+    },
+    {
+      "id": "00.1",
+      "phase": "phase-00-foundations.md",
+      "title": "`git init` (already done), `.gitignore` (Java, Node, IDE, `.env`), `.editorconfig`, `.gitattributes` with `*.sh text eol=lf`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.0"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.1-git-init",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.2",
+      "phase": "phase-00-foundations.md",
+      "title": "Root `pom.xml` — `spring-boot-starter-parent` 4.1.1, `java.version=25`, `spring-cloud-dependencies:2025.1.3` BOM import, module list. Then run the Boot 4 verification list above before writing any code against it.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.1"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.2-root-pom-xml",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.3",
+      "phase": "phase-00-foundations.md",
+      "title": "`platform/pom.xml` aggregator; `services/pom.xml` empty aggregator.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.2"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.3-platform-pom-xml-aggregator-services",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.4",
+      "phase": "phase-00-foundations.md",
+      "title": "`common-money`: `Money`, `CurrencyMismatchException`, `FxMath`. Tests first.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "00.3"
+      ],
+      "tests": [
+        "MoneyArithmeticTest",
+        "MoneyMismatchTest",
+        "MoneyAllocateTest",
+        "MoneyParsingTest",
+        "FxMathTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.4-common-money",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.5",
+      "phase": "phase-00-foundations.md",
+      "title": "`contracts`: `EventEnvelope`, marker interface, and the Phase 01–03 events as stubs.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.3"
+      ],
+      "tests": [
+        "EventEnvelopeSerdeTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.5-contracts",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.6",
+      "phase": "phase-00-foundations.md",
+      "title": "`common-messaging`: the `api/` + `spring/` split; outbox entity + appender + publisher, `ProcessedEvent` + handler, error-handler config, `JsonSerde`, shared Flyway migration.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "00.3"
+      ],
+      "tests": [
+        "OutboxPublisherTest",
+        "IdempotentHandlerTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.6-common-messaging",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.7",
+      "phase": "phase-00-foundations.md",
+      "title": "`common-web`: problem details, correlation filter, OpenAPI, structured JSON logging.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.3"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.7-common-web",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.8",
+      "phase": "phase-00-foundations.md",
+      "title": "`common-security`: resource-server config, `ConfigurableRolesClaimConverter`, `IdentityProviderPort` + `KeycloakIdentityAdapter` + `InMemoryIdentityAdapter`, `@CurrentUser` resolver.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.3"
+      ],
+      "tests": [
+        "RolesClaimMappingTest",
+        "IdentityProviderPortContractTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.8-common-security",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.9",
+      "phase": "phase-00-foundations.md",
+      "title": "`infra/postgres/init-databases.sql` — 8 databases, one non-superuser role per service.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.4",
+        "00.5",
+        "00.6",
+        "00.7",
+        "00.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.9-infra-postgres-init-databases-sql",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.10",
+      "phase": "phase-00-foundations.md",
+      "title": "`docker-compose.infra.yml` + `infra/kafka/create-topics.sh` from the topic catalogue.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.10-docker-compose-infra-yml-infra-kafka",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.11",
+      "phase": "phase-00-foundations.md",
+      "title": "Keycloak realm export, stored with the Keycloak adapter.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.10"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.11-keycloak-realm-export-stored-with-the",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.12",
+      "phase": "phase-00-foundations.md",
+      "title": "`tasks.ps1` wrapper: `up`, `down`, `reset`, `logs <svc>`, `psql <db>`, `topics`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.11"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.12-tasks-ps1-wrapper",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.13",
+      "phase": "phase-00-foundations.md",
+      "title": "Config hygiene pass: every endpoint from an environment variable, local defaults only in the `local` profile. Establish this now — it is far more annoying to retrofit across ten services than to start with.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.12"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.13-config-hygiene-pass",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "00.14",
+      "phase": "phase-00-foundations.md",
+      "title": "`README.md` — architecture diagram, how to run, port table.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.13"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/00.14-readme-md",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.1",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "`services/api-gateway` — routes, security, CORS, rate limiter, actuator.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "00.14"
+      ],
+      "tests": [
+        "GatewayAuthTest",
+        "GatewayRateLimitTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.1-services-api-gateway",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.2",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "`services/identity-service` — Flyway `V1__user_profile.sql` + the shared outbox migration, entity, repository, registration via `IdentityProviderPort`, register/me endpoints.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "01.1"
+      ],
+      "tests": [
+        "RegisterUserIntegrationTest",
+        "RegisterRollbackTest",
+        "DuplicateEmailTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.2-services-identity-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.3",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "Wire `common-security`, `common-web`, `common-messaging` into both services and confirm the shared Flyway migration applies into each service's own database.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "01.2"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.3-wire-common-security-common-web-common",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.4",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "Publish `UserRegisteredV1` via the outbox; verify in Kafka UI that the message appears on the right partition.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "01.3"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.4-publish-userregisteredv1-via-the",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.5",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "`services/account-service` — Flyway, entity, the `UserRegisteredV1` consumer, wallet creation, `AccountOpenedV1` publication, read endpoints.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "01.4"
+      ],
+      "tests": [
+        "DuplicateWalletConstraintTest",
+        "UserRegisteredConsumerTest",
+        "AccountQueryTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.5-services-account-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.6",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "Add both services to `docker-compose.yml` (services profile) and confirm they also run from the IDE against `docker-compose.infra.yml`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "01.5"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.6-add-both-services-to-docker-compose",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "01.7",
+      "phase": "phase-01-identity-account-gateway.md",
+      "title": "Reconciliation endpoint for orphaned Keycloak users.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "01.6"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/01.7-reconciliation-endpoint-for-orphaned",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.1",
+      "phase": "phase-02-ledger.md",
+      "title": "Scaffold `ledger-service`, Flyway `V1__ledger.sql` with the schema above.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "01.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.1-scaffold-ledger-service-flyway-v1",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.2",
+      "phase": "phase-02-ledger.md",
+      "title": "`V2__balanced_trigger.sql` — the deferred constraint trigger and its function.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.1"
+      ],
+      "tests": [
+        "BalancedEntryTest",
+        "ZeroSumInvariantTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.2-v2-balanced-trigger-sql",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.3",
+      "phase": "phase-02-ledger.md",
+      "title": "Domain: `LedgerAccount`, `JournalEntry`, `Posting`, `AccountBalance`, `Reservation`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.2"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.3-domain",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.4",
+      "phase": "phase-02-ledger.md",
+      "title": "`PostingEngine` — validate, insert, update balances per the balance-column semantics table, append outbox. One transaction. Put that table and the sign convention in a comment at the top of the class.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.3"
+      ],
+      "tests": [
+        "DebitDecreasesCustomerBalanceTest",
+        "InsufficientFundsTest",
+        "IdempotentEntryTest",
+        "MultiCurrencyEntryTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.4-postingengine",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.5",
+      "phase": "phase-02-ledger.md",
+      "title": "Optimistic-lock retry wrapper (`@Retryable` on `ObjectOptimisticLockingFailureException`).",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.4"
+      ],
+      "tests": [
+        "ConcurrentMixedTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.5-optimistic-lock-retry-wrapper",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.6",
+      "phase": "phase-02-ledger.md",
+      "title": "`ReservationService` — hold / capture (full and partial) / release / expiry sweep.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.5"
+      ],
+      "tests": [
+        "ReservedFundsAreNotAvailableTest",
+        "PartialCaptureTest",
+        "ReservationExpiryTest",
+        "CaptureDoesNotDoubleDecrementTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.6-reservationservice",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.7",
+      "phase": "phase-02-ledger.md",
+      "title": "System account bootstrap: a Flyway migration seeding `FX_POOL`, `FEE_INCOME`, `FX_PNL`, `EXTERNAL_CLEARING` per supported currency.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.6"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.7-system-account-bootstrap",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.8",
+      "phase": "phase-02-ledger.md",
+      "title": "Consume `AccountOpenedV1` → create the matching `ledger_account` and zero balance, then publish `LedgerAccountCreatedV1` so `account-service` can fill `ledger_account_id`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.8-consume-accountopenedv1-create-the",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.9",
+      "phase": "phase-02-ledger.md",
+      "title": "HTTP endpoints for entries, reservations and queries.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.9-http-endpoints-for-entries",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.10",
+      "phase": "phase-02-ledger.md",
+      "title": "Reconciliation job + admin trigger + deliberate-drift endpoint.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.9"
+      ],
+      "tests": [
+        "ReconciliationDetectsDriftTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.10-reconciliation-job-admin-trigger",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "02.11",
+      "phase": "phase-02-ledger.md",
+      "title": "A funding endpoint (`EXTERNAL_CLEARING` → wallet) so later phases have money to move.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.10"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/02.11-a-funding-endpoint",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.1",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "`payment-service` scaffold, Flyway, `Payment` entity, explicit state machine.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "02.11"
+      ],
+      "tests": [
+        "PaymentStateMachineTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.1-payment-service-scaffold-flyway",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.2",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Local account read model in `payment-service` from `account.account.v1`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "03.1"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.2-local-account-read-model-in-payment",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.3",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "`POST /api/payments` → PENDING + outbox, in one transaction; 202 response. Ledger key derived as `payment:<paymentId>`, never the client's header.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "03.2"
+      ],
+      "tests": [
+        "TransferHappyPathTest",
+        "TransferInsufficientFundsTest",
+        "CrossUserAuthTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.3-post-api-payments-pending-outbox-in",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.4",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Ledger consumer for `PaymentInitiatedV1`; result consumer in `payment-service`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "03.3"
+      ],
+      "tests": [
+        "LedgerEventRedeliveryTest",
+        "ZeroSumAfterTransfersTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.4-ledger-consumer-for-paymentinitiatedv1",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.5",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Gateway idempotency filter with Redis, including the body-hash check.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "03.4"
+      ],
+      "tests": [
+        "DoubleSubmitTest",
+        "SameKeyDifferentBodyTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.5-gateway-idempotency-filter-with-redis",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.6",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "`notification-service`: STOMP config, ticket endpoint, handshake interceptor, fan-out.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "03.5"
+      ],
+      "tests": [
+        "WebSocketTicketTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.6-notification-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.7",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "`web/` scaffold, Tailwind, OIDC, app shell, bottom tab bar, design tokens.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.3"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.7-web-scaffold-tailwind-oidc-app-shell",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.8",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Home screen wired to `GET /api/accounts/me` + ledger balances.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.8-home-screen-wired-to-get-api-accounts",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.9",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Transfer flow with client-generated idempotency key and optimistic insert.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.9-transfer-flow-with-client-generated",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.10",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "WebSocket client with reconnect/backoff and the 5 s polling fallback.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.10-websocket-client-with-reconnect",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.11",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Dev drawer.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.10"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.11-dev-drawer",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "03.12",
+      "phase": "phase-03-payments-and-ui.md",
+      "title": "Add both services and `web` to `docker-compose.yml`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.11"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/03.12-add-both-services-and-web-to-docker",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.1",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "`simulator-service` scaffold + random-walk rate producer with configurable volatility.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "03.12"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.1-simulator-service-scaffold-random-walk",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.2",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "`fx-service` scaffold, Flyway, rate consumer, in-memory latest-rate cache with replay-on-startup.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "04.1"
+      ],
+      "tests": [
+        "RateReplayOnStartupTest",
+        "InversePairConsistencyTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.2-fx-service-scaffold-flyway-rate",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.3",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "`FxMath` extension returning `(converted, residual)`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "04.2"
+      ],
+      "tests": [
+        "FxConversionRoundingTest",
+        "JpyZeroDigitTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.3-fxmath-extension-returning",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.4",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "Quote creation: spread, conversion, ledger reservation, persistence.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "04.3"
+      ],
+      "tests": [
+        "QuoteReservesFundsTest",
+        "SpreadIsRevenueTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.4-quote-creation",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.5",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "Quote execution: outbox event, ledger capture, the five-leg posting (six with a residual).",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "04.4"
+      ],
+      "tests": [
+        "FxEntryBalanceTest",
+        "ConcurrentQuoteExecuteTest",
+        "ZeroSumMultiCurrencyTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.5-quote-execution",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.6",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "Expiry sweep for quotes and their reservations.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "04.5"
+      ],
+      "tests": [
+        "QuoteExpiryTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.6-expiry-sweep-for-quotes-and-their",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.7",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "Ledger: `FX` entry type, pool/fee/PnL accounts per currency, negative-balance allowance for system accounts.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "04.6"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.7-ledger",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.8",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "`payment-service`: cross-currency transfers — obtain a quote, then the same saga with compensation on rejection.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "04.7"
+      ],
+      "tests": [
+        "CrossCurrencyTransferTest",
+        "FxServiceDownTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.8-payment-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.9",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "`notification-service`: forward rate ticks to subscribed clients (throttled to ~2/s).",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "04.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.9-notification-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.10",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "Exchange screen, countdown, live rate, confirm flow.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "04.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.10-exchange-screen-countdown-live-rate",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "04.11",
+      "phase": "phase-04-fx-multicurrency.md",
+      "title": "Extend the seed script with GBP/USD/JPY balances.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "04.10"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/04.11-extend-the-seed-script-with-gbp-usd",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.1",
+      "phase": "phase-05-cards.md",
+      "title": "`card-service` scaffold, Flyway, encryption helper, keyed `pan_hash` derivation, PAN generation (valid Luhn, test BIN).",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "04.11"
+      ],
+      "tests": [
+        "CardLookupByPanHashTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.1-card-service-scaffold-flyway",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.2",
+      "phase": "phase-05-cards.md",
+      "title": "Issuance endpoint + `CardIssuedV1`; reveal endpoint behind step-up.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "05.1"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.2-issuance-endpoint-cardissuedv1-reveal",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.3",
+      "phase": "phase-05-cards.md",
+      "title": "Authorization consumer with the full decision chain, keyed by `cardId`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "05.2"
+      ],
+      "tests": [
+        "AuthorizationApprovedTest",
+        "AuthorizationDeclinedFrozenTest",
+        "DuplicateNetworkRefTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.3-authorization-consumer-with-the-full",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.4",
+      "phase": "phase-05-cards.md",
+      "title": "Limit evaluation using a rolling window over `card_authorization`.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "05.3"
+      ],
+      "tests": [
+        "LimitExceededTest",
+        "ConcurrentAuthLimitTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.4-limit-evaluation-using-a-rolling",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.5",
+      "phase": "phase-05-cards.md",
+      "title": "FX path for foreign-currency merchants, with the card mark-up applied separately from the exchange spread.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "05.4"
+      ],
+      "tests": [
+        "ForeignCurrencyAuthTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.5-fx-path-for-foreign-currency-merchants",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.6",
+      "phase": "phase-05-cards.md",
+      "title": "Settlement consumer: full, partial, over-settlement, reversal.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "05.5"
+      ],
+      "tests": [
+        "SettlementExactTest",
+        "SettlementPartialTest",
+        "OverSettlementTest",
+        "ReversalTest",
+        "ZeroSumAfterCardActivityTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.6-settlement-consumer",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.7",
+      "phase": "phase-05-cards.md",
+      "title": "Ledger: `CARD_SETTLEMENT` entry type; hold expiry sweep at 7 days.",
+      "kind": "build",
+      "model": "opus",
+      "deps": [
+        "05.6"
+      ],
+      "tests": [
+        "AuthExpiryTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.7-ledger",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.8",
+      "phase": "phase-05-cards.md",
+      "title": "`simulator-service`: merchant catalogue, spend endpoints, controllable clock.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "05.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.8-simulator-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.9",
+      "phase": "phase-05-cards.md",
+      "title": "Freeze/unfreeze, limits endpoints.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "05.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.9-freeze-unfreeze-limits-endpoints",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.10",
+      "phase": "phase-05-cards.md",
+      "title": "Card screen, reveal + step-up, freeze, limits, spend feed with pending/settled states.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "05.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.10-card-screen-reveal-step-up-freeze",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "05.11",
+      "phase": "phase-05-cards.md",
+      "title": "Logback PAN masking + a test asserting it.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "05.10"
+      ],
+      "tests": [
+        "PanNeverLoggedTest"
+      ],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/05.11-logback-pan-masking-a-test-asserting",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.1",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "`analytics-service` scaffold, Flyway, consumers for ledger and card topics.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "05.11"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.1-analytics-service-scaffold-flyway",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.2",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "MCC → category seed data; merchant rules table + seeds; user overrides.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.1"
+      ],
+      "tests": [
+        "CategorisationPriorityTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.2-mcc-category-seed-data-merchant-rules",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.3",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "`monthly_spend` incremental upsert projection, bucketed on `occurredAt`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.2"
+      ],
+      "tests": [
+        "ProjectionRebuildTest",
+        "NoWallClockInProjectionTest",
+        "MultiCurrencySpendTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.3-monthly-spend-incremental-upsert",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.4",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Retro-apply on user override, with aggregate correction.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.3"
+      ],
+      "tests": [
+        "RetroApplyTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.4-retro-apply-on-user-override-with",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.5",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Budgets, threshold detection, idempotent alerting.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.4"
+      ],
+      "tests": [
+        "BudgetAlertTest",
+        "ReplayDoesNotRealertTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.5-budgets-threshold-detection-idempotent",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.6",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Vault CRUD; move-in/move-out via `payment-service`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.5"
+      ],
+      "tests": [
+        "VaultTransferTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.6-vault-crud-move-in-move-out-via",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.7",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Round-up rule on settled card postings, with overdraw skip.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.6"
+      ],
+      "tests": [
+        "RoundUpTest",
+        "RoundUpSkipsOnInsufficientFundsTest",
+        "RoundUpOnSettlementOnlyTest"
+      ],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.7-round-up-rule-on-settled-card-postings",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.8",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Query endpoints: monthly summary, category drill-down, trend, top merchants.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.8-query-endpoints",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.9",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Vaults screen.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.9-vaults-screen",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.10",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Analytics dashboard with the chart set.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.10-analytics-dashboard-with-the-chart-set",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "06.11",
+      "phase": "phase-06-vaults-analytics.md",
+      "title": "Seed script extension: 3 months of plausible history so the dashboard is not empty.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.10"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/06.11-seed-script-extension",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.1",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "Retry-topic chain + DLT in `common-messaging`, with explicit transient/fatal classification. Retry and DLT topics get 3 partitions, per the Phase 00 catalogue.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "06.11"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.1-retry-topic-chain-dlt-in-common",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.2",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "`ErrorHandlingDeserializer` so poison messages bypass retry entirely.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.1"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.2-errorhandlingdeserializer-so-poison",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.3",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "Audit every consumer: business rejections must commit, not throw.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.2"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.3-audit-every-consumer",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.4",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "DLT browse/replay admin endpoints + depth gauges.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.3"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.4-dlt-browse-replay-admin-endpoints",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.5",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "Resilience4j on remaining sync hops, with tested fallbacks.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.4"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.5-resilience4j-on-remaining-sync-hops",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.6",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "Chaos endpoints behind the `chaos` profile.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.5"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.6-chaos-endpoints-behind-the-chaos",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.7",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "`analytics-rebuild` and `point-in-time` tooling.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.6"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.7-analytics-rebuild-and-point-in-time",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.8",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "`CooperativeStickyAssignor` + graceful shutdown across all services.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.8-cooperativestickyassignor-graceful",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.9",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "Redis pub/sub fan-out for `notification-service`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.9-redis-pub-sub-fan-out-for-notification",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "07.10",
+      "phase": "phase-07-resilience-and-scale.md",
+      "title": "Run the failure experiments; write up `docs/failure-modes.md` with real observations.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.9"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/07.10-run-the-failure-experiments-write-up",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.1",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "`docker-compose.obs.yml` — Prometheus, Grafana, kafka-exporter, postgres-exporter.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "07.10"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.1-docker-compose-obs-yml",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.2",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Actuator + Micrometer + Prometheus registry on every service.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.1"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.2-actuator-micrometer-prometheus",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.3",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Custom metrics above, with consistent naming.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.2"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.3-custom-metrics-above-with-consistent",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.4",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Grafana dashboard JSON, provisioned.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.3"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.4-grafana-dashboard-json-provisioned",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.5",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "k6 scripts, with a shared setup module that registers and funds test users.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.4"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.5-k6-scripts-with-a-shared-setup-module",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.6",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Baseline run at 100 rps; record it before tuning anything.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.5"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.6-baseline-run-at-100-rps-record-it",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.7",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Ramp run to find the knee; record p99 at each step.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.6"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.7-ramp-run-to-find-the-knee-record-p99",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.8",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "`hotspot.js` — measure the single-account ceiling.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.8-hotspot-js",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.9",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Tune the top bottleneck; re-run; record the delta.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.9-tune-the-top-bottleneck-re-run-record",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.10",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "2-hour soak; check for leaks and drift.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.10-2-hour-soak-check-for-leaks-and-drift",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "08.11",
+      "phase": "phase-08-load-and-observability.md",
+      "title": "Write `docs/performance.md`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.10"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/08.11-write-docs-performance-md",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.1",
+      "phase": "phase-09-polish.md",
+      "title": "Multi-stage layered Dockerfiles for all 10 services + the web app.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "08.11"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.1-multi-stage-layered-dockerfiles-for",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.2",
+      "phase": "phase-09-polish.md",
+      "title": "Full `docker-compose.yml` with real healthchecks and ordering.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.1"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.2-full-docker-compose-yml-with-real",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.3",
+      "phase": "phase-09-polish.md",
+      "title": "Verify cold start under 3 minutes; fix whatever is waiting on a timeout.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.2"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.3-verify-cold-start-under-3-minutes-fix",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.4",
+      "phase": "phase-09-polish.md",
+      "title": "Seed generator via public APIs, idempotent, with realistic distributions.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.3"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.4-seed-generator-via-public-apis",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.5",
+      "phase": "phase-09-polish.md",
+      "title": "`tasks.ps1 demo` scripted walkthrough.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.4"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.5-tasks-ps1-demo-scripted-walkthrough",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.6",
+      "phase": "phase-09-polish.md",
+      "title": "Frontend polish pass: loading, empty, error, offline, motion, a11y.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.5"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.6-frontend-polish-pass",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.7",
+      "phase": "phase-09-polish.md",
+      "title": "Screenshots for the README.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.6"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.7-screenshots-for-the-readme",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.8",
+      "phase": "phase-09-polish.md",
+      "title": "Write the README.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.7"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.8-write-the-readme",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.9",
+      "phase": "phase-09-polish.md",
+      "title": "Write the ten ADRs.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.8"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.9-write-the-ten-adrs",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.10",
+      "phase": "phase-09-polish.md",
+      "title": "`docs/architecture.md` with the service diagram and a transfer sequence diagram.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.9"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.10-docs-architecture-md-with-the-service",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.11",
+      "phase": "phase-09-polish.md",
+      "title": "CI workflow with caching, badge, and the invariant check.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.10"
+      ],
+      "tests": [],
+      "lastInPhase": false,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.11-ci-workflow-with-caching-badge-and-the",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    },
+    {
+      "id": "09.12",
+      "phase": "phase-09-polish.md",
+      "title": "Cross-platform `tasks.sh` alongside `tasks.ps1`.",
+      "kind": "build",
+      "model": "sonnet",
+      "deps": [
+        "09.11"
+      ],
+      "tests": [],
+      "lastInPhase": true,
+      "status": "pending",
+      "attempts": 0,
+      "branch": "task/09.12-cross-platform-tasks-sh-alongside",
+      "commit": null,
+      "costUsd": 0,
+      "notes": null
+    }
+  ]
+}
