@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "00.1",
+  "current": "00.2",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 0.5876641999999999,
+    "totalSpentUsd": 0.9830237999999999,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -35,11 +35,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/00.1-git-init",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "63265e7",
+      "costUsd": 0.39535960000000003,
       "notes": null
     },
     {
@@ -53,7 +53,7 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/00.2-root-pom-xml",
       "commit": null,
