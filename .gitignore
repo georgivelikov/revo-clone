@@ -1,9 +1,45 @@
+# Java / Maven
 target/
 *.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+.flattened-pom.xml
+
+# Node / frontend
 node_modules/
+dist/
+dist-ssr/
+*.local
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
 .env
+.env.*
+!.env.example
+
+# IDEs
 .idea/
 *.iml
+*.iws
 .vscode/
+!.vscode/extensions.json
+.settings/
+.classpath
+.project
+*.launch
+.factorypath
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Logs and harness bookkeeping
+*.log
 agent/log/
 .claude/settings.local.json
