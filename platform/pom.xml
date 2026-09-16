@@ -20,7 +20,10 @@
     common-messaging, common-web, common-security. No business logic lives here.
   </description>
 
-  <!-- No <modules> yet: common-money, contracts, common-messaging, common-web and
-       common-security land in later Phase 00 tasks. -->
+  <modules>
+    <module>common-money</module>
+    <!-- contracts, common-messaging, common-web and common-security land in later
+         Phase 00 tasks. -->
+  </modules>
 
 </project>
