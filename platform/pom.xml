@@ -25,7 +25,7 @@
     <module>contracts</module>
     <module>common-messaging</module>
     <module>common-web</module>
-    <!-- common-security lands in a later Phase 00 task. -->
+    <module>common-security</module>
   </modules>
 
 </project>

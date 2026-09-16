@@ -207,6 +207,26 @@ auto-configuration and exposes `/swagger-ui.html` and `/v3/api-docs` with zero e
 `common-web`'s `WebAutoConfiguration` only adds a default `OpenAPI` bean to set the displayed
 title/version from `spring.application.name`.
 
+## Keycloak: no bare `26` image tag; admin client is `org.keycloak:keycloak-admin-client`
+
+Source: `quay.io/api/v1/repository/keycloak/keycloak/tag/` (queried directly - the bare `26`
+tag phase-00's infrastructure table names does not exist on `quay.io/keycloak/keycloak`; only
+fully- or minor-qualified tags do, e.g. `26.7`, `26.7.3`). **Use `26.7`** (latest patch of the
+26.x line, and the version `keycloak-admin-client` 26.0.x/`testcontainers-keycloak` 4.3.1 were
+built and tested against) for both `docker-compose.infra.yml` (task 00.10) and any
+`KeycloakContainer` in tests - not the bare `26` the phase table shows as shorthand.
+
+Admin REST client: `org.keycloak:keycloak-admin-client` (confirmed present on Maven Central up
+to `26.0.12` via `maven-metadata.xml`); pinned explicitly since it isn't part of any Spring/Boot
+BOM. **No official `org.testcontainers` Keycloak module exists** (confirmed 404 on
+`repo1.maven.org`); the de facto standard is the community module
+`com.github.dasniko:testcontainers-keycloak` (latest `4.3.1`), whose own POM pins
+`org.testcontainers:testcontainers:2.0.5` - matching Boot 4.1.1's managed Testcontainers
+version exactly, so no conflict. Its `KeycloakContainer` (package `dasniko.testcontainers.keycloak`,
+confirmed by inspecting the jar) exposes `getKeycloakAdminClient()`, an already-authenticated
+`Keycloak` admin client against the container's `master` realm - simpler than building one by
+hand with `KeycloakBuilder`.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

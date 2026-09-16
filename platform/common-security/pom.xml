@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.revolutclone</groupId>
+    <artifactId>platform</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>common-security</artifactId>
+
+  <name>Revolut Clone :: Platform :: Common Security</name>
+  <description>
+    Resource-server JWT validation plus the two Keycloak-specific seams: a roles-claim
+    converter that reads its claim path from config instead of hardcoding
+    realm_access.roles, and IdentityProviderPort, which keeps Keycloak admin-API calls out
+    of identity-service. api/ has no Keycloak type; keycloak/ is the one adapter.
+  </description>
+
+  <dependencies>
+    <!-- Versions come from spring-boot-dependencies via the root parent; never pin them here. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+
+    <dependency>
+      <!-- Not part of any Spring BOM - third-party, version pinned deliberately. Matches the
+           keycloak-admin-client version that com.github.dasniko:testcontainers-keycloak:4.3.1
+           itself depends on and is tested against, confirmed by reading that artifact's own
+           POM on repo1.maven.org; see docs/spring-boot-4-notes.md. Also matches the Keycloak
+           26 server image in the phase 00 infrastructure table closely enough for the Admin
+           REST API surface this adapter uses. -->
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-admin-client</artifactId>
+      <version>26.0.11</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- No official org.testcontainers Keycloak module exists (confirmed 404 on Maven
+           Central); this community module is the de facto standard, pinned explicitly since
+           it isn't part of any Spring/Boot BOM. Its own POM depends on
+           org.testcontainers:testcontainers:2.0.5, matching Boot 4.1.1's managed version
+           exactly - see docs/spring-boot-4-notes.md. -->
+      <groupId>com.github.dasniko</groupId>
+      <artifactId>testcontainers-keycloak</artifactId>
+      <version>4.3.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>

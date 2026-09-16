@@ -1,0 +1,2 @@
+com.revolutclone.security.keycloak.KeycloakSecurityAutoConfiguration
+com.revolutclone.security.SecurityAutoConfiguration
