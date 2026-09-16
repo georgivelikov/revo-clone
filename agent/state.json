@@ -118,7 +118,7 @@
       "status": "done",
       "attempts": 0,
       "branch": "task/00.5-contracts",
-      "commit": null,
+      "commit": "a7e46e9",
       "costUsd": 0,
       "notes": null
     },
