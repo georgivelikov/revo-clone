@@ -22,8 +22,8 @@
 
   <modules>
     <module>common-money</module>
-    <!-- contracts, common-messaging, common-web and common-security land in later
-         Phase 00 tasks. -->
+    <module>contracts</module>
+    <!-- common-messaging, common-web and common-security land in later Phase 00 tasks. -->
   </modules>
 
 </project>
