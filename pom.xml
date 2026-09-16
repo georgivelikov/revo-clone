@@ -47,4 +47,25 @@
     <module>services</module>
   </modules>
 
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <!-- The JVM's default timezone name on this machine ("Europe/Kiev", the
+                 pre-2022 alias) is rejected outright by postgres:17's bundled tzdata as an
+                 invalid "TimeZone" startup parameter, failing every JDBC connection before
+                 any test code runs. Forcing UTC for the test JVM sidesteps host-locale
+                 dependence entirely rather than chasing tzdata aliases. -->
+            <systemPropertyVariables combine.children="append">
+              <user.timezone>UTC</user.timezone>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
 </project>

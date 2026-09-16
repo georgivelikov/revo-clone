@@ -135,6 +135,53 @@ Hibernate 6) and is the mapping to use for the outbox payload column. Decide onc
 module. Add **`org.flywaydb:flyway-database-postgresql`** (confirmed at 12.4.0) alongside
 `flyway-core`, or migrations fail at runtime with "no database support".
 
+**`flyway-core` alone is also not enough to make Boot run Flyway at all.** Boot 4.1 split
+`FlywayAutoConfiguration` out of `spring-boot-autoconfigure` into its own module,
+`org.springframework.boot:spring-boot-flyway` (confirmed present on Maven Central at 4.1.1 via
+`mvn dependency:get`; version managed by `spring-boot-dependencies`, no version needed in the
+dependency declaration). Without it, Flyway migrations are silently never applied — no error,
+no log line, just missing tables surfacing later as a Hibernate schema-validation failure
+("missing table [...]") that looks like a migration-content bug rather than a missing-module
+one. Same pattern as the `spring-boot-persistence` split below: assume Boot 4.1 modularized
+autoconfiguration per concern, and verify by resolving the artifact rather than assuming a
+Boot-3-era single `spring-boot-autoconfigure` jar has everything.
+
+## Boot 4.1 split Kafka autoconfiguration out too: spring-boot-kafka
+
+Source: `spring-boot-kafka-4.1.1.jar` (confirmed present on Maven Central at 4.1.1 via
+`mvn dependency:get`). Same pattern as `spring-boot-flyway`: `spring-kafka` alone puts the
+Spring Kafka library on the classpath but does not activate Boot's `KafkaAutoConfiguration`
+(the `KafkaTemplate`, consumer/producer factory beans, `spring.kafka.*` property binding).
+Without `org.springframework.boot:spring-boot-kafka` as an explicit dependency, injecting
+`KafkaTemplate` fails with `NoSuchBeanDefinitionException` and nothing in the log explains why.
+
+Also note: Boot's auto-configured `KafkaTemplate` bean is typed `KafkaTemplate<Object, Object>`,
+not `<String, String>` - Spring's generic-aware autowiring only matches an injection point
+whose generic parameters agree exactly with the `@Bean` method's declared return type, so a
+constructor asking for `KafkaTemplate<String, String>` also fails to match even once this
+module is present. Depend on `KafkaTemplate<Object, Object>` (or define your own bean) rather
+than narrowing the generics.
+
+## Boot 4.1 split persistence autoconfiguration out of spring-boot-autoconfigure
+
+Source: `spring-boot-persistence-4.1.1.jar` (resolved locally via `spring-boot-starter-data-jpa`;
+confirmed by unzipping the jar and finding the class).
+
+**`@EntityScan` moved.** It is no longer `org.springframework.boot.autoconfigure.domain.EntityScan`
+(that package doesn't exist in `spring-boot-autoconfigure-4.1.1.jar` at all) - it is
+`org.springframework.boot.persistence.autoconfigure.EntityScan`, shipped in the new
+`spring-boot-persistence` module that `spring-boot-starter-data-jpa` pulls in transitively.
+Expect other JPA-adjacent autoconfiguration classes to have moved into this module too; verify
+by unzipping the jar rather than guessing if one goes missing.
+
+## Spring Kafka 4.1: `ExponentialBackOffWithMaxRetries` moved to `.support`
+
+Source: `spring-kafka-4.1.1.jar` (resolved locally; confirmed by unzipping the jar). It is
+`org.springframework.kafka.support.ExponentialBackOffWithMaxRetries`, not
+`org.springframework.kafka.listener.ExponentialBackOffWithMaxRetries` (a Boot-3-era location
+that no longer exists in 4.1.1). `DefaultErrorHandler` and `DeadLetterPublishingRecoverer`
+themselves are still at their expected `org.springframework.kafka.listener` package.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

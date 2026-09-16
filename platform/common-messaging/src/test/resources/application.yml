@@ -1,0 +1,14 @@
+spring:
+  flyway:
+    locations: classpath:db/migration/common
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+revolut:
+  messaging:
+    outbox:
+      # Long enough that the @Scheduled poller never fires mid-test and races the Testcontainers
+      # Postgres shutdown that happens right after each short-lived test context closes.
+      poll-delay-ms: 300000
