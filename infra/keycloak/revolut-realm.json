@@ -1,0 +1,88 @@
+{
+  "realm": "revolut",
+  "enabled": true,
+  "sslRequired": "none",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+
+  "roles": {
+    "realm": [
+      { "name": "customer", "description": "A registered retail customer of the app." },
+      { "name": "admin", "description": "Back-office / operations access." }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "revolut-web",
+      "name": "Revolut Web",
+      "description": "Public SPA client - React 19 + Vite dev server, PKCE-only auth code flow.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "revolut-backend",
+      "name": "Revolut Backend",
+      "description": "Confidential service client used by identity-service's Admin API calls via IdentityProviderPort/KeycloakIdentityAdapter.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "revolut-backend-local-dev-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+
+  "users": [
+    {
+      "username": "alice@demo.io",
+      "email": "alice@demo.io",
+      "firstName": "Alice",
+      "lastName": "Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "demo", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
+      "username": "bob@demo.io",
+      "email": "bob@demo.io",
+      "firstName": "Bob",
+      "lastName": "Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "demo", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
+      "username": "service-account-revolut-backend",
+      "enabled": true,
+      "serviceAccountClientId": "revolut-backend",
+      "clientRoles": {
+        "realm-management": ["manage-users"]
+      }
+    }
+  ]
+}
