@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "00.3",
+  "current": "00.4",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 1.7733151999999999,
+    "totalSpentUsd": 3.9853987,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -71,11 +71,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/00.3-platform-pom-xml-aggregator-services",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "f9cf276",
+      "costUsd": 0.271999,
       "notes": null
     },
     {
@@ -95,12 +95,12 @@
         "FxMathTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
-      "attempts": 0,
+      "status": "done",
+      "attempts": 1,
       "branch": "task/00.4-common-money",
-      "commit": null,
-      "costUsd": 0,
-      "notes": null
+      "commit": "dacf301",
+      "costUsd": 1.9400845,
+      "notes": "Finished in an interactive session, not via agent/run.ps1: the automated attempt had written all five test classes plus CurrencyMismatchException but left Money.java and FxMath.java unwritten (non-compiling). Wrote both against the existing tests without modifying any assertion; gate.ps1 -TaskId 00.4 green with 85 tests passing."
     },
     {
       "id": "00.5",
