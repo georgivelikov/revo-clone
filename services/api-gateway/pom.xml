@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.revolutclone</groupId>
+    <artifactId>services</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>api-gateway</artifactId>
+
+  <name>Revolut Clone :: Services :: API Gateway</name>
+  <description>
+    The only thing the browser talks to. Spring Cloud Gateway on WebFlux: routes to
+    identity-service and account-service, edge JWT validation, CORS (configured nowhere
+    else), a correlation-id filter, and a per-user Redis-backed rate limit. No database, no
+    Kafka - a pure reactive routing layer.
+  </description>
+
+  <dependencies>
+    <!-- Versions come from spring-boot-dependencies / spring-cloud-dependencies via the root
+         parent; never pin them here. -->
+    <dependency>
+      <!-- Renamed in Spring Cloud 2025.0 and stays renamed in 2025.1 - the old
+           spring-cloud-starter-gateway coordinates are deprecated and may not resolve at all
+           on this train. See docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <dependency>
+      <!-- Reused here only for ConfigurableRolesClaimConverter and RevolutSecurityProperties,
+           which are transport-agnostic (no Servlet types). spring-boot-starter-web is
+           excluded so its Tomcat/Spring MVC classpath never reaches this WebFlux-only
+           service, and SecurityAutoConfiguration / KeycloakSecurityAutoConfiguration (both
+           Servlet-shaped) are excluded at the application class instead of being allowed to
+           try to wire a Servlet HttpSecurity bean that cannot exist here. -->
+      <groupId>com.revolutclone</groupId>
+      <artifactId>common-security</artifactId>
+      <version>${project.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-web</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Boot 4.1 split WebTestClient auto-configuration out of spring-boot-test-autoconfigure
+           into its own module - @AutoConfigureWebTestClient lives here, not in
+           spring-boot-starter-test's transitive test-autoconfigure jar. See
+           docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webflux-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>

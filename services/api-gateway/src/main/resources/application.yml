@@ -1,0 +1,74 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: identity-service
+              uri: ${revolut.gateway.routes.identity-service-uri}
+              predicates:
+                - Path=/api/identity/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            - id: account-service
+              uri: ${revolut.gateway.routes.account-service-uri}
+              predicates:
+                - Path=/api/accounts/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+
+revolut:
+  security:
+    roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  gateway:
+    cors:
+      allowed-origin: ${CORS_ALLOWED_ORIGIN}
+    routes:
+      identity-service-uri: ${IDENTITY_SERVICE_URI}
+      account-service-uri: ${ACCOUNT_SERVICE_URI}
+    rate-limiter:
+      # Per-user token bucket, shared across every route. Overridden down to 1/1 in
+      # GatewayRateLimitTest so a two-request burst deterministically exhausts it.
+      replenish-rate: ${RATE_LIMITER_REPLENISH_RATE:20}
+      burst-capacity: ${RATE_LIMITER_BURST_CAPACITY:40}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash

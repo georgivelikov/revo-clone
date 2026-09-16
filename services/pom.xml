@@ -16,10 +16,12 @@
 
   <name>Revolut Clone :: Services</name>
   <description>
-    Aggregator for the business services. Empty until Phase 01 adds identity-service and
-    account-service.
+    Aggregator for the business services.
   </description>
 
-  <!-- No <modules> yet: filled from Phase 01 onward. -->
+  <modules>
+    <module>api-gateway</module>
+    <!-- identity-service and account-service land in later Phase 01 tasks. -->
+  </modules>
 
 </project>

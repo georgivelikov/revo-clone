@@ -227,6 +227,104 @@ confirmed by inspecting the jar) exposes `getKeycloakAdminClient()`, an already-
 `Keycloak` admin client against the container's `master` realm - simpler than building one by
 hand with `KeycloakBuilder`.
 
+## Spring Cloud Gateway 5.0.3 (webflux): Java package roots didn't move, only the artifact and property prefix did
+
+Source: unzipped `spring-cloud-gateway-server-webflux-5.0.3.jar` directly (task 01.1) rather
+than trusting a Boot-3-era tutorial. The `-server-webflux`/`-server-mvc` split (phase-00's
+notes already flagged the artifact rename: use `spring-cloud-starter-gateway-server-webflux`,
+never the deprecated `spring-cloud-starter-gateway`) only changed the **artifact id** and the
+**property prefix** (`spring.cloud.gateway.server.webflux.*`). The **Java API package roots
+are unchanged from the Boot-3-era gateway**: `org.springframework.cloud.gateway.route.RouteLocator`,
+`org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder`,
+`org.springframework.cloud.gateway.filter.ratelimit.{KeyResolver,RedisRateLimiter,PrincipalNameKeyResolver}`
+all still exist at those exact paths in 5.0.3 — confirmed by listing the jar's entries, not by
+assumption. `RedisRateLimiter` is auto-configured by `GatewayRedisAutoConfiguration` (one of
+the `AutoConfiguration.imports` entries in the starter jar) once
+`spring-boot-starter-data-redis-reactive` is on the classpath — no manual bean needed unless
+you want to override its defaults. Its own `@ConfigurationProperties` prefix **did** move
+under the new prefix (confirmed by grepping the class's own constant pool):
+`spring.cloud.gateway.server.webflux.redis-rate-limiter.replenish-rate` /
+`.burst-capacity` / `.requested-tokens` — not the bare `spring.cloud.gateway.redis-rate-limiter.*`
+a Boot-3-era example would use.
+
+## Boot 4.1 split WebTestClient auto-configuration into its own module: `spring-boot-webflux-test`
+
+Source: <https://docs.spring.io/spring-boot/reference/testing/spring-boot-applications.html>,
+confirmed present at `spring-boot-webflux-test:4.1.1` via a direct HTTP 200 on
+`repo1.maven.org`. `@AutoConfigureWebTestClient` is **not** in `spring-boot-test-autoconfigure`
+(that jar shrank drastically in 4.1 — it now holds only a handful of cross-cutting classes plus
+the `json` test slice) and is **not** pulled in transitively by `spring-boot-starter-test`.
+Same "modularized per concern, verify by resolving the artifact" pattern as
+`spring-boot-persistence`/`spring-boot-flyway`/`spring-boot-kafka` above. Package also moved:
+`org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient`, not
+`org.springframework.boot.test.autoconfigure.web.reactive` (the Boot-3-era location, which no
+longer exists at all in 4.1.1).
+
+## Excluding a Servlet-shaped auto-configuration from a WebFlux-only service needs `excludeName`, not `exclude`
+
+Not a Boot 4 API change, but a real trap hit building `api-gateway` (task 01.1) that is worth
+recording since this project will reuse `common-security`/`common-web` from WebFlux services
+again. If a service excludes `spring-boot-starter-web` to stay WebFlux-only but still depends
+on a library module (like this project's `common-security`) whose auto-configuration class
+`implements WebMvcConfigurer` or otherwise references a Servlet-only type,
+`@SpringBootApplication(exclude = {ThatAutoConfiguration.class})` **fails at context startup**
+with either `NoClassDefFoundError` deep in `ConfigurationClassParser` or the confusingly
+unrelated-looking `IllegalStateException: No auto-configuration attributes found` — because a
+`Class<?>` literal in an annotation attribute is resolved (and the class loaded and verified)
+eagerly by the JVM, and loading a class that `implements WebMvcConfigurer` fails when
+`spring-webmvc` isn't on the classpath at all.
+
+**Fix: use `excludeName = {"fully.qualified.ClassName"}` (a `String[]`) instead of
+`exclude = {ClassName.class}`.** `excludeName` never classloads the excluded class, so it works
+even when that class literally cannot be loaded on this classpath.
+
+## `RequestRateLimiter` gateway filter has no Java DSL - YAML only
+
+Source: <https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html>,
+and confirmed empirically (task 01.1): `GatewayFilterSpec.requestRateLimiter(c ->
+c.setRateLimiter(redisRateLimiter).setKeyResolver(userKeyResolver))` compiles and runs, but
+every request through that route throws `IllegalArgumentException: No Configuration found for
+route <id> or defaultFilters` at request time — the Java DSL never registers the per-route
+`Config` into `RedisRateLimiter`'s internal map the way the YAML-driven filter-factory path
+does. The docs say this outright: *"The `RequestRateLimiter` is not configurable with the
+'shortcut' notation"* and show no Java DSL example at all — YAML is the only supported route
+of configuration for this specific filter. Define these routes under
+`spring.cloud.gateway.server.webflux.routes` (note the prefix, per the note above) with:
+
+```yaml
+filters:
+  - name: RequestRateLimiter
+    args:
+      redis-rate-limiter.replenishRate: 10
+      redis-rate-limiter.burstCapacity: 20
+      redis-rate-limiter.requestedTokens: 1
+      key-resolver: "#{@userKeyResolver}"
+```
+
+`key-resolver` is a SpEL reference to a `KeyResolver` `@Bean` (still ordinary Java) - only the
+route/filter wiring itself needs to be YAML.
+
+## `src/test/resources/application.yml` REPLACES `src/main/resources/application.yml` for tests, it does not merge
+
+Not a Boot 4 change - this is long-standing Spring Boot behaviour, but it cost real time on
+task 01.1 and is worth recording since the instinct to add a small test-only
+`application.yml` with a few extra defaults is natural and wrong. Boot resolves the default
+`classpath:/application.yml` config-data location as a single resource lookup; when both
+`target/classes/application.yml` (main) and `target/test-classes/application.yml` (test) exist
+on the test classpath, **the test one is used instead of, not in addition to, the main one** -
+main's entire config, including anything as central as `spring.cloud.gateway.*.routes`, becomes
+invisible to every test. It also has a nasty second-order effect: `mvn test` (without `clean`)
+does not delete a `target/test-classes/application.yml` whose source file you removed, so the
+shadowing can persist and cause confusing failures even after you think you've undone it -
+always `mvn clean` when suspecting this.
+
+**Use `@TestPropertySource(properties = {...})` (or `@DynamicPropertySource` for values only
+known at runtime, e.g. a Testcontainers port) to add or override individual keys instead.**
+Those layer on top of the real `application.yml` rather than replacing it. Reach for a real
+`application-test.yml` file only if you also activate it as a genuine Spring profile
+(`@ActiveProfiles`) - profile-specific files overlay the base one; same-named default files do
+not.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
