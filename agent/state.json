@@ -157,7 +157,7 @@
       "status": "done",
       "attempts": 0,
       "branch": "task/00.7-common-web",
-      "commit": null,
+      "commit": "517fee5",
       "costUsd": 0,
       "notes": null
     },
