@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.revolutclone</groupId>
+    <artifactId>platform</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>common-web</artifactId>
+
+  <name>Revolut Clone :: Platform :: Common Web</name>
+  <description>
+    Shared HTTP-layer concerns every service needs: RFC-7807 problem details, correlation-id
+    propagation, structured JSON logging defaults, and OpenAPI exposure. Auto-configured, so a
+    service picks this up by adding the dependency.
+  </description>
+
+  <dependencies>
+    <!-- Versions come from spring-boot-dependencies via the root parent; never pin them here. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+
+    <dependency>
+      <!-- Not part of any Spring BOM - third-party, so pinned here deliberately. Version
+           confirmed against Boot 4.1.0/4.1.1 by reading its own parent POM on
+           repo1.maven.org; see docs/spring-boot-4-notes.md. -->
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>3.1.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>

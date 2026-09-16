@@ -182,6 +182,31 @@ Source: `spring-kafka-4.1.1.jar` (resolved locally; confirmed by unzipping the j
 that no longer exists in 4.1.1). `DefaultErrorHandler` and `DeadLetterPublishingRecoverer`
 themselves are still at their expected `org.springframework.kafka.listener` package.
 
+## Boot 4.1's own structured JSON logging needs no extra dependency
+
+Source: <https://docs.spring.io/spring-boot/reference/features/logging.html>
+
+`logging.structured.format.console=logstash` (or `ecs`, or `gelf`) turns on JSON logging to
+stdout with **no `logstash-logback-encoder` dependency required** — it's built into
+`spring-boot` itself. MDC key-value pairs (so `correlationId`, once
+`CorrelationIdFilter` puts it there) are folded into the JSON output automatically as real
+fields, not just a pattern token. `common-web` (phase 00 task 7) defaults every service that
+depends on it to `logstash` format via a low-precedence `EnvironmentPostProcessor`, so a
+service's own `application.yml` — in particular the `local` profile, which wants a
+human-readable console pattern instead — can override it with no extra wiring.
+
+## springdoc-openapi 3.1.1 targets Boot 4.1
+
+Source: `springdoc-openapi-starter-webmvc-ui-3.1.1.pom` and its parent
+`springdoc-openapi-3.1.1.pom` on `repo1.maven.org` — the parent's own `<parent>` is
+`spring-boot-starter-parent:4.1.0`. springdoc's 2.x line targets Spring 6/Boot 3; **3.x is the
+Boot 4/Framework 7 line.** Not part of any Spring BOM, so it's pinned explicitly in
+`common-web/pom.xml` rather than left to `spring-boot-dependencies`. Adding the
+`springdoc-openapi-starter-webmvc-ui` dependency is sufficient on its own — it ships its own
+auto-configuration and exposes `/swagger-ui.html` and `/v3/api-docs` with zero extra config;
+`common-web`'s `WebAutoConfiguration` only adds a default `OpenAPI` bean to set the displayed
+title/version from `spring.application.name`.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
@@ -189,5 +214,4 @@ Append here as these get settled, with sources:
 - Actuator endpoint paths and the health-group config shape in Boot 4.1.
 - Whether `spring-kafka` 4.1's `DefaultErrorHandler` / `DeadLetterPublishingRecoverer` API
   changed (phase 07's retry and DLT chain depends on it).
-- Springdoc/OpenAPI version compatible with Boot 4.1 (phase 00 task 7, `common-web`).
 - React 19 + Vite specifics are not a Spring concern and belong in the phase 03b notes.
