@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "01.7",
+  "current": "02.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 3.9853987,
@@ -424,10 +424,10 @@
       ],
       "tests": [],
       "lastInPhase": true,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/01.7-reconciliation-endpoint-for-orphaned",
-      "commit": null,
+      "commit": "f75516e",
       "costUsd": 0,
       "notes": null
     },
