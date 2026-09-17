@@ -64,6 +64,17 @@
             </systemPropertyVariables>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <configuration>
+            <!-- Same host-timezone problem as maven-surefire-plugin above, hit for real running
+                 identity-service locally via `mvn spring-boot:run` (task 01.3): that goal forks
+                 its own JVM, so the surefire fix above does not cover it. A packaged jar's own
+                 JVM launch (Docker, later tasks) will need the same -Duser.timezone=UTC. -->
+            <jvmArguments>-Duser.timezone=UTC</jvmArguments>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

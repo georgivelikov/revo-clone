@@ -81,7 +81,7 @@
       "enabled": true,
       "serviceAccountClientId": "revolut-backend",
       "clientRoles": {
-        "realm-management": ["manage-users"]
+        "realm-management": ["manage-users", "view-realm"]
       }
     }
   ]
