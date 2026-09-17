@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "02.4",
+  "current": "02.5",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 3.9853987,
@@ -504,10 +504,10 @@
         "MultiCurrencyEntryTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/02.4-postingengine",
-      "commit": null,
+      "commit": "a5e9493",
       "costUsd": 0,
       "notes": null
     },
