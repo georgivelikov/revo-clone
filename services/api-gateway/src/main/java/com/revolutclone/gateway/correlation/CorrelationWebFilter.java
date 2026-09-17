@@ -1,6 +1,8 @@
 package com.revolutclone.gateway.correlation;
 
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -27,10 +29,17 @@ import reactor.core.publisher.Mono;
  * needs at the edge. Full MDC continuity across every downstream reactive hop would need
  * Reactor {@code Context} propagation into a logging bridge, which is unnecessary here since
  * each business service re-validates and re-logs the request under its own correlation id.
+ *
+ * <p>{@code doFinally} logs exactly one line per request, with MDC set around just that call -
+ * found live (task 01.7) that without it, MDC held {@code correlationId} but nothing ever
+ * actually emitted a log line carrying it, on either this gateway or a routed service whose
+ * handler logs nothing on a plain request. Silently defeats CLAUDE.md rule 10 otherwise.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorrelationWebFilter implements WebFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(CorrelationWebFilter.class);
 
     public static final String HEADER = "X-Correlation-Id";
     private static final String MDC_KEY = "correlationId";
@@ -52,7 +61,16 @@ public class CorrelationWebFilter implements WebFilter {
         MDC.put(MDC_KEY, finalCorrelationId);
         try {
             return chain.filter(exchange.mutate().request(mutatedRequest).build())
-                    .contextWrite(ctx -> ctx.put(MDC_KEY, finalCorrelationId));
+                    .contextWrite(ctx -> ctx.put(MDC_KEY, finalCorrelationId))
+                    .doFinally(signal -> {
+                        MDC.put(MDC_KEY, finalCorrelationId);
+                        try {
+                            log.info("{} {} -> {}", request.getMethod(), request.getURI().getPath(),
+                                    exchange.getResponse().getStatusCode());
+                        } finally {
+                            MDC.remove(MDC_KEY);
+                        }
+                    });
         } finally {
             MDC.remove(MDC_KEY);
         }

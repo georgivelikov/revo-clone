@@ -43,6 +43,12 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      # /opt/kafka/bin isn't on this image's PATH by default, so a bare `docker exec revolut-kafka
+      # kafka-topics.sh ...` (as agent/phase-verify.ps1 - read-only, cannot be edited - runs)
+      # fails with "executable file not found in $PATH". `docker exec` inherits a container's
+      # configured environment, so extending PATH here fixes every such bare invocation without
+      # touching the protected script. Found live in task 01.7's phase-closing verification.
+      PATH: /opt/kafka/bin:/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
