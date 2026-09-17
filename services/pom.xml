@@ -23,6 +23,7 @@
     <module>api-gateway</module>
     <module>identity-service</module>
     <module>account-service</module>
+    <module>ledger-service</module>
   </modules>
 
   <build>
