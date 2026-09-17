@@ -8,15 +8,31 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.domain.Persistable;
 
-/** Mirrors plans/phase-01-identity-account-gateway.md's user_profile table exactly. */
+/**
+ * Mirrors plans/phase-01-identity-account-gateway.md's user_profile table exactly.
+ *
+ * <p>Implements {@link Persistable} and always reports {@code isNew() == true}, same reasoning
+ * as {@code common-messaging}'s {@code ProcessedEvent} and account-service's {@code Account}
+ * (found live, task 01.5): with a manually-assigned (non-generated) {@code id}, Spring Data's
+ * default heuristic treats a populated id as "existing" and routes the initial {@code save()}
+ * through JPA {@code merge()} instead of {@code persist()}, so {@code @PrePersist} fires on an
+ * internal copy rather than the instance the caller is still holding - {@code createdAt} and
+ * {@code updatedAt} came back {@code null} in the register response even though both columns
+ * were correctly populated in the database. Safe for the {@code PATCH /me} update path too:
+ * that path never calls {@code save()} at all, it mutates an already-managed entity inside a
+ * {@code @Transactional} method and relies on Hibernate's dirty checking, which is independent
+ * of {@link Persistable}.
+ */
 @Entity
 @Table(name = "user_profile")
-public class UserProfile {
+public class UserProfile implements Persistable<UUID> {
 
     @Id
     private UUID id;
@@ -73,8 +89,16 @@ public class UserProfile {
         this.updatedAt = Instant.now();
     }
 
+    @Override
+    @Transient
     public UUID getId() {
         return id;
+    }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return true;
     }
 
     public String getEmail() {

@@ -1,0 +1,44 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: account-service
+  datasource:
+    url: ${ACCOUNT_DB_URL}
+    username: ${ACCOUNT_DB_USER}
+    password: ${ACCOUNT_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway owns the schema. Never raise this.
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/account
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: account-service
+      auto-offset-reset: earliest
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+
+revolut:
+  security:
+    roles-claim: ${ROLES_CLAIM:realm_access.roles}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash

@@ -1,0 +1,19 @@
+# Local-dev defaults only. Never merged into application.yml - see CLAUDE.md's config-hygiene
+# rule; the tripwire checks this by filename.
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/account
+    username: account
+    password: account
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://127.0.0.1:8180/realms/revolut
+
+logging:
+  structured:
+    format:
+      console:

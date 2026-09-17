@@ -22,7 +22,7 @@
   <modules>
     <module>api-gateway</module>
     <module>identity-service</module>
-    <!-- account-service lands in a later Phase 01 task. -->
+    <module>account-service</module>
   </modules>
 
 </project>
