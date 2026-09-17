@@ -1,18 +1,23 @@
 package com.revolutclone.ledger;
 
+import com.revolutclone.ledger.domain.LedgerAccount;
+import com.revolutclone.ledger.domain.LedgerAccountRepository;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
- * No {@code @EntityScan}/{@code @EnableJpaRepositories} override yet - this task (02.1) is
- * scaffold + schema only, no domain entities exist. Task 02.3 will need to add both, matching
- * identity-service's and account-service's precedent: once common-messaging's own
- * {@code MessagingAutoConfiguration} declares scoped {@code @EntityScan}/
- * {@code @EnableJpaRepositories}, Boot's default auto-detection backs off for the whole
- * context, so this service's own entities and repositories become invisible to Spring Data
- * without an explicit override naming them. See docs/spring-boot-4-notes.md.
+ * Both annotations are required, not optional: common-messaging's own
+ * {@code MessagingAutoConfiguration} declares its own {@code @EntityScan} and
+ * {@code @EnableJpaRepositories}, scoped to its own outbox/idempotent packages. Once either
+ * annotation appears anywhere in the context, Boot's default auto-detection backs off entirely
+ * for the whole context, not just common-messaging's packages - see
+ * docs/spring-boot-4-notes.md and identity-service's/account-service's identical situation.
  */
 @SpringBootApplication
+@EntityScan(basePackageClasses = LedgerAccount.class)
+@EnableJpaRepositories(basePackageClasses = LedgerAccountRepository.class)
 public class LedgerServiceApplication {
 
     public static void main(String[] args) {
