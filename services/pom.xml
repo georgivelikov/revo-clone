@@ -25,4 +25,23 @@
     <module>account-service</module>
   </modules>
 
+  <build>
+    <plugins>
+      <!-- Inherited by every service module: without this, `mvn package` produces a plain
+           (non-executable) jar - "no main manifest attribute" at `java -jar`, found live
+           building this task's Dockerfiles. Version comes from spring-boot-starter-parent. -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
