@@ -91,6 +91,21 @@ name and the role that owns it.
 
   Decode the returned `access_token` and check `realm_access.roles` contains `customer`.
 
+## The ledger
+
+`ledger-service` is the highest-stakes code in the project — everything after Phase 02 assumes
+it is right. Double-entry, immutable postings, balanced per currency, enforced twice (in code
+by `PostingEngine`, and again by a deferred database trigger at commit, since application code
+eventually gets bypassed by a migration, a support script, or a bug).
+
+**Sign convention:** a user wallet is a liability of the bank to the customer. A CREDIT
+increases the customer's money; a DEBIT decreases it. A transfer from Alice to Bob is
+`DEBIT alice_wallet` / `CREDIT bob_wallet`. Getting this backwards is the single most common
+bug in ledger implementations, and it is invisible until you look at a statement — see
+[`docs/architecture.md`](docs/architecture.md#sign-convention) for the full data model and the
+balance-column-semantics table (which column a posting moves depends on whether it is
+capturing a hold, and getting that wrong is invisible to the zero-sum invariant).
+
 ## Port map
 
 | Service | Port |
