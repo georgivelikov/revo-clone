@@ -1,0 +1,48 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: identity-service
+  datasource:
+    url: ${IDENTITY_DB_URL}
+    username: ${IDENTITY_DB_USER}
+    password: ${IDENTITY_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway owns the schema. Never raise this.
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/identity
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+
+revolut:
+  security:
+    roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  identity:
+    provider: ${IDENTITY_PROVIDER:keycloak}
+    keycloak:
+      server-url: ${KEYCLOAK_SERVER_URL}
+      realm: ${KEYCLOAK_REALM}
+      admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID}
+      admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash

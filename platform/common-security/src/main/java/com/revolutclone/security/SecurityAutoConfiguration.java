@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -58,6 +59,12 @@ public class SecurityAutoConfiguration implements WebMvcConfigurer {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                             JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
         http
+                // Every service here is a stateless JWT resource server - no session, no
+                // cookie, so no CSRF token to steal. CSRF protection defends session/cookie
+                // auth; leaving it on rejects every non-GET request from a bearer-token
+                // client with 403, including unauthenticated ones like a register endpoint.
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**")
                         .permitAll()

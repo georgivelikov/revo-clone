@@ -21,7 +21,8 @@
 
   <modules>
     <module>api-gateway</module>
-    <!-- identity-service and account-service land in later Phase 01 tasks. -->
+    <module>identity-service</module>
+    <!-- account-service lands in a later Phase 01 task. -->
   </modules>
 
 </project>

@@ -304,6 +304,23 @@ filters:
 `key-resolver` is a SpEL reference to a `KeyResolver` `@Bean` (still ordinary Java) - only the
 route/filter wiring itself needs to be YAML.
 
+## Boot 4.1 split MockMvc auto-configuration into its own module too: `spring-boot-webmvc-test`
+
+Source: `spring-boot-dependencies-4.1.1.pom` (confirmed `spring-boot-webmvc-test` and
+`spring-boot-starter-webmvc-test` both listed there; `spring-boot-webmvc-test-4.1.1.jar`
+resolved and inspected directly, task 01.2). Same split as `spring-boot-webflux-test`
+(`@AutoConfigureWebTestClient`, above) but for the Servlet side: `@AutoConfigureMockMvc` is
+**not** in `spring-boot-test-autoconfigure` (that jar has none of the servlet/mockmvc classes
+at all in 4.1.1 — confirmed by listing its contents) and is **not** pulled in transitively by
+`spring-boot-starter-test`. A service written as a normal Servlet MVC app (like
+`identity-service`) that wants `@AutoConfigureMockMvc` must add
+`org.springframework.boot:spring-boot-webmvc-test` as an explicit test-scope dependency.
+Package: `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc` — not
+`org.springframework.boot.test.autoconfigure.web.servlet` (the Boot-3-era location, which no
+longer exists in 4.1.1). Expect this "modularized per concern, verify by resolving the
+artifact" pattern to keep recurring for any `@AutoConfigure*` annotation Boot 3 shipped as part
+of one monolithic `spring-boot-test-autoconfigure`.
+
 ## `src/test/resources/application.yml` REPLACES `src/main/resources/application.yml` for tests, it does not merge
 
 Not a Boot 4 change - this is long-standing Spring Boot behaviour, but it cost real time on
@@ -324,6 +341,79 @@ Those layer on top of the real `application.yml` rather than replacing it. Reach
 `application-test.yml` file only if you also activate it as a genuine Spring profile
 (`@ActiveProfiles`) - profile-specific files overlay the base one; same-named default files do
 not.
+
+## Flyway merges every `flyway.locations` entry into one flat version sequence — V1 and V2 are reserved for the shared migrations
+
+Confirmed empirically (task 01.2): with
+`flyway.locations: classpath:db/migration/common,classpath:db/migration/<service>`
+(the `new-service` skill's own template), Flyway does **not** version each location
+independently — it resolves migrations from every location into a single ordered sequence
+keyed by version number, and fails startup with `FlywayException: Found more than one
+migration with version N` if two locations each contain a migration with the same version
+number. `common-messaging`'s shared migrations are `db/migration/common/V1__outbox_event.sql`
+and `V2__processed_event.sql` (from phase 00), so **every service's own first migration must
+start at `V3`, never `V1` or `V2`** — those two versions are reserved project-wide for the
+shared migrations. `identity-service`'s `V3__user_profile.sql` is the first example of this;
+every service scaffolded after it needs the same offset.
+
+## `common-messaging`'s `@EntityScan`/`@EnableJpaRepositories` disable Boot's own auto-detection for the WHOLE consuming service, not just its own packages
+
+Confirmed empirically (task 01.2), and **neither annotation is additive with Boot's default
+behavior the way it's easy to assume** — this cost two rounds of debugging on the same wrong
+assumption, worth stating plainly: `common-messaging`'s `MessagingAutoConfiguration` declares
+its own `@EntityScan(basePackageClasses = {OutboxEvent.class, ProcessedEvent.class})` and
+`@EnableJpaRepositories(basePackageClasses = {OutboxEventRepository.class,
+ProcessedEventRepository.class})` to wire its own entities/repositories into any service that
+depends on the module.
+
+- `DataJpaRepositoriesAutoConfiguration` (Boot's default repository scan) is
+  `@ConditionalOnMissingBean` on `JpaRepositoryFactoryBean` — once *any* `@EnableJpaRepositories`
+  fires anywhere in the context, even one scoped to totally unrelated packages, Boot backs off
+  its own scanning **entirely**, for every package. A service's own `XxxRepository` interface
+  then silently never becomes a bean — no error at startup, just a `NoSuchBeanDefinitionException`
+  the first time something autowires it.
+- Once that's fixed by adding the service's own `@EnableJpaRepositories`, the *next* failure is
+  `Not a managed type: class ...` — because `@EntityScan` has the exact same
+  once-any-appears-Boot's-default-is-gone behavior. Boot's implicit entity scan (from the
+  `@SpringBootApplication` package down) only runs when **no** `@EntityScan` exists anywhere in
+  the context; `common-messaging`'s own `@EntityScan` means the service's own entities are never
+  registered with Hibernate unless the service adds its own `@EntityScan` too.
+
+**Every service that depends on `common-messaging` must declare its own
+`@EntityScan(basePackageClasses = ...)` AND `@EnableJpaRepositories(basePackageClasses = ...)`**,
+both covering its own domain/repository classes, typically stacked on the
+`@SpringBootApplication` class alongside `common-messaging`'s own declarations. Multiple
+declarations of either annotation with disjoint base packages coexist fine in one context —
+this is not a workaround, it's the supported pattern for a shared library module plus a host
+application each owning their own scan scope. `identity-service`'s `IdentityServiceApplication`
+is the first example (both annotations, `UserProfile`/`UserProfileRepository`); every service
+scaffolded after it needs the same pair, and the `new-service` skill's claim that including
+`common-messaging` needs "no per-service entity-scan or repository config" is wrong for both
+annotations, not just one.
+
+## Spring Security's Servlet resource-server default leaves CSRF ON, which 403s a bearer-token API
+
+Not a Boot 4 change, but a real gap found finishing `common-security`'s own default filter
+chain against a real service (task 01.2): Spring Security's `HttpSecurity` DSL enables CSRF
+protection by default whether or not `oauth2ResourceServer(...).jwt(...)` is configured. CSRF
+defends session/cookie-authenticated browser clients, which none of this project's services
+are — every one is a stateless bearer-JWT resource server, so there is no session and no
+cookie to steal a token from. Left on, it rejects every non-`GET` request with a bare `403
+Forbidden` (no body, no exception in the handler chain — it never reaches a controller), which
+looks exactly like an authorization bug rather than what it is. It also blocks
+`/api/identity/register`, phase 01's one intentionally *unauthenticated* route, since CSRF
+runs before the authorization/authentication filters even get a say.
+
+**Every `SecurityFilterChain` bean in this project — `common-security`'s own default
+(`SecurityAutoConfiguration`) and any service's override (e.g.
+`identity-service`'s `SecurityConfig`) — must explicitly**:
+```java
+http.csrf(csrf -> csrf.disable())
+    .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+```
+`common-security`'s default now does this; a service overriding the whole filter chain (rather
+than composing with the default) must repeat it, since overriding replaces the bean entirely
+rather than layering on top of it.
 
 ## Still to verify when first needed
 
