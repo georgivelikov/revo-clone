@@ -415,6 +415,48 @@ http.csrf(csrf -> csrf.disable())
 than composing with the default) must repeat it, since overriding replaces the bean entirely
 rather than layering on top of it.
 
+## Testcontainers' Kafka module (`org.testcontainers:testcontainers-kafka`) does not start on Docker Desktop for Windows
+
+Not a Spring/Boot fact, but a real environment limitation hit writing an automated regression
+test for task 01.4 (proving `identity-service` actually publishes `UserRegisteredV1` to a real
+broker, not just an outbox row). Both `org.testcontainers.kafka.KafkaContainer` (tried against
+`apache/kafka:3.9.0`, the image `docker-compose.infra.yml` itself uses) and
+`org.testcontainers.kafka.ConfluentKafkaContainer` (tried against `confluentinc/cp-kafka:7.7.1`)
+fail identically: `Timed out waiting for log output matching '.*Transitioning from RECOVERY to
+RUNNING.*'`, with **no container stdout/stderr at all** — the container never produces output,
+which points at the container failing to start rather than starting slowly.
+
+`docker info` on this machine confirms why: `Operating System: Docker Desktop`,
+`Kernel Version: ...-microsoft-standard-WSL2`. Both Testcontainers Kafka container classes rely
+on `--network=host` so the broker's advertised listener can point straight at `localhost` for
+the host JVM. Docker Desktop's `host` network driver does not give a container the real host
+network namespace the way native Linux Docker does — it is scoped to the WSL2 VM instead — so
+the broker's listener never binds where the wait strategy (and the test JVM) expect it, and the
+container appears to hang with no logs.
+
+**Consequence:** an automated test that spins up its own Kafka broker via
+`testcontainers-kafka` will not run on this machine (Docker Desktop + WSL2). This does not
+affect `OutboxPublisherTest` (`common-messaging`, phase 00 task 6) or
+`RegisterUserIntegrationTest` (phase 01 task 2) — neither touches a real broker; the first uses
+a `RecordingEventPublisher` fake and the second sets `poll-delay-ms` to five minutes so the
+poller never fires during the test. The actual `KafkaEventPublisher` → real-broker path has
+instead been verified **manually**, end to end, against the live `docker-compose.infra.yml`
+stack (task 01.4): registered three real users, waited for the `OutboxPublisher`'s real
+scheduled poll, and consumed `identity.user.v1` directly via
+`docker exec revolut-kafka kafka-console-consumer.sh --property print.partition=true --property
+print.key=true` — confirming each message's key is the user id, each landed on a different
+partition (11, 6, 3 — the default partitioner hashing distinct keys), and every
+`EventEnvelope` field (`eventId`, `occurredAt`, `correlationId`, `version`) and
+`UserRegisteredV1` payload field were present and correct.
+
+If a later phase needs an automated broker-backed test on this kind of environment, look at
+either running the test suite inside a Linux container/CI runner (where `--network=host` behaves
+normally), or wiring the test against the already-running `docker-compose.infra.yml` broker via
+`spring.kafka.bootstrap-servers=127.0.0.1:9092` instead of a fresh Testcontainers broker —
+deliberately not done here, since that would make `mvn clean verify` depend on external state
+being up, breaking the reactor's self-containment guarantee that every other test in this
+project relies on.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
