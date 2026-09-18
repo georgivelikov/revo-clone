@@ -37,9 +37,19 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>All business logic, validation, the sign convention and the balance-column-semantics table
  * live on {@link PostingEngine}'s javadoc, which is the class callers actually depend on; this
  * class is intentionally undocumented beyond this note; read {@link PostingEngine} first.
+ *
+ * <p><b>Public, not package-private, for one specific reason (task 02.6):</b>
+ * {@code ReservationService.capture} needs to insert a capturing posting AND update the
+ * {@code Reservation} row's own state in the SAME transaction. It cannot go through
+ * {@link PostingEngine}'s {@code @Retryable} entry point to do that — calling a
+ * {@code @Retryable} method from inside an already-open transaction (capture's own) would retry
+ * inside a transaction already marked rollback-only on the first conflict, exactly the ordering
+ * bug plans/phase-02-ledger.md's Risks &amp; gotchas warns about. Calling this class directly
+ * lets capture's own outer transaction be the only transaction boundary in that call chain.
+ * Every other caller should still go through {@link PostingEngine}.
  */
 @Service
-class PostingTransactionExecutor {
+public class PostingTransactionExecutor {
 
     private static final Map<JournalEntryType, String> REQUIRED_IDEMPOTENCY_KEY_PREFIX = Map.of(
             JournalEntryType.TRANSFER, "payment:",
@@ -54,7 +64,7 @@ class PostingTransactionExecutor {
     private final PostingRepository postingRepository;
     private final OutboxAppender outboxAppender;
 
-    PostingTransactionExecutor(LedgerAccountRepository ledgerAccountRepository,
+    public PostingTransactionExecutor(LedgerAccountRepository ledgerAccountRepository,
             AccountBalanceRepository accountBalanceRepository, JournalEntryRepository journalEntryRepository,
             PostingRepository postingRepository, OutboxAppender outboxAppender) {
         this.ledgerAccountRepository = ledgerAccountRepository;
@@ -65,7 +75,7 @@ class PostingTransactionExecutor {
     }
 
     @Transactional
-    PostEntryResult postEntry(PostEntryCommand command) {
+    public PostEntryResult postEntry(PostEntryCommand command) {
         validateIdempotencyKeyPrefix(command);
         if (command.postings().size() < 2) {
             throw new IllegalArgumentException(
@@ -144,13 +154,21 @@ class PostingTransactionExecutor {
         // makes them the counterparty. A capturing DEBIT (reservationId set) decrements
         // reserved, not available, so it is exempt from this check - ReservationService (task
         // 02.6) owns ensuring a capture never exceeds what was actually held.
+        //
+        // The check is `available >= amount`, NOT `available - reserved >= amount` (found wrong
+        // while building task 02.6, which is the first thing to ever put a nonzero value in
+        // `reserved`): a hold already does `available -= amount` at hold time, per the balance-
+        // column-semantics table, so `available` already excludes every currently-held amount.
+        // Subtracting `reserved` again double-penalizes it. Concretely: a 100.00 wallet with a
+        // 30.00 hold has available=70.00, reserved=30.00 - a genuinely separate 50.00 debit
+        // must be ALLOWED (70.00 covers it), but `available - reserved` = 40.00 would wrongly
+        // reject it. See ReservedFundsAreNotAvailableTest.
         if (line.reservationId() == null && line.direction() == PostingDirection.DEBIT
                 && !account.getType().isSystemAccount()) {
             AccountBalance balance = accountBalanceRepository.findById(line.ledgerAccountId())
                     .orElseThrow(() -> new IllegalStateException(
                             "ledger_account " + line.ledgerAccountId() + " has no account_balance row"));
-            long spendable = balance.getAvailableMinor() - balance.getReservedMinor();
-            if (spendable < line.amountMinor()) {
+            if (balance.getAvailableMinor() < line.amountMinor()) {
                 return Optional.of(EntryRejectionReason.INSUFFICIENT_FUNDS);
             }
         }
