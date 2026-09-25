@@ -125,4 +125,15 @@ public class AccountBalance implements Persistable<UUID> {
         this.reservedMinor -= amountMinor;
         this.availableMinor += amountMinor;
     }
+
+    /**
+     * Directly mutates {@code available_minor} with no corresponding posting - not a real money
+     * movement, and unlike every method above it, deliberately desynchronizes this cached total
+     * from {@code sum(postings)}. Exists ONLY for task 02.10's admin corrupt-balance endpoint, so
+     * the reconciliation job's safety net can be watched actually catching a drifted account.
+     * Never call this from business logic.
+     */
+    public void corruptAvailableForTesting(long deltaMinor) {
+        this.availableMinor += deltaMinor;
+    }
 }
