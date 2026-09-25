@@ -659,7 +659,7 @@
         "PaymentStateMachineTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/03.1-payment-service-scaffold-flyway",
       "commit": null,
