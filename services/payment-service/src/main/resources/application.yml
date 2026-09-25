@@ -27,6 +27,10 @@ spring:
 revolut:
   security:
     roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  payments:
+    # Per-transaction cap in minor units, NOT a balance check - the ledger owns balances and
+    # rejects an overdraw with INSUFFICIENT_FUNDS after the fact. See PaymentLimitsProperties.
+    max-amount-minor: ${PAYMENT_MAX_AMOUNT_MINOR:10000000}
 
 management:
   endpoints:
