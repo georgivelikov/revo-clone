@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "03.3",
+  "current": "03.4",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 19.850899700000003,
@@ -699,12 +699,12 @@
         "CrossUserAuthTest"
       ],
       "lastInPhase": false,
-      "status": "blocked",
+      "status": "done",
       "attempts": 3,
       "branch": "task/03.3-post-api-payments-pending-outbox-in",
-      "commit": null,
+      "commit": "8fe0353",
       "costUsd": 5.5917590000000015,
-      "notes": null
+      "notes": "Unblocked by hand after the 3-attempt circuit breaker tripped on two issues neither retry fixed: (1) tripwire.ps1's KafkaTemplate.send grep has no comment awareness and flagged a javadoc explaining why the outbox is used instead of a direct send() - reworded the comment, did not touch the tripwire; (2) CrossUserAuthTest was never written across all 3 attempts - added it per the contract already documented on SourceAccountNotFoundException's javadoc. Gate green by hand (mvn clean verify, 236 tests, tripwire clean), then merged/tagged manually the same way run.ps1 would."
     },
     {
       "id": "03.4",
