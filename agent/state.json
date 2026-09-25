@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "03.1",
+  "current": "03.2",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 3.9853987,
+    "totalSpentUsd": 8.309843700000002,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -659,11 +659,11 @@
         "PaymentStateMachineTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/03.1-payment-service-scaffold-flyway",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "fa2b808",
+      "costUsd": 4.324445000000002,
       "notes": null
     },
     {
@@ -677,7 +677,7 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/03.2-local-account-read-model-in-payment",
       "commit": null,
