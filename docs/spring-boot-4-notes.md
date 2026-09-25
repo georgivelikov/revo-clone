@@ -457,6 +457,49 @@ deliberately not done here, since that would make `mvn clean verify` depend on e
 being up, breaking the reactor's self-containment guarantee that every other test in this
 project relies on.
 
+## Spring Kafka 4.1: `ConsumerSeekAware` is unchanged, and the compacted-topic rebuild is its documented use case
+
+Sources: the 4.1.1 javadoc for
+<https://docs.spring.io/spring-kafka/docs/current/api/org/springframework/kafka/listener/ConsumerSeekAware.html>
+and its nested `ConsumerSeekAware.ConsumerSeekCallback`, plus the reference chapter
+<https://docs.spring.io/spring-kafka/reference/kafka/seek.html> (both pages render as "Spring
+for Apache Kafka 4.1.1"). Verified for task 03.2, where `payment-service`'s account read model
+has to rebuild itself from the compacted `account.account.v1` topic. **The jar could not be
+inspected directly in that session** — `javap`/`unzip` required an approval this sandbox could
+not grant — so these signatures come from the published docs rather than the artifact.
+
+- A bean carrying `@KafkaListener` methods opts in by implementing
+  `org.springframework.kafka.listener.ConsumerSeekAware`. All of its methods are `default`, so
+  only the one you need has to be overridden:
+  `registerSeekCallback(ConsumerSeekCallback)`,
+  `onPartitionsAssigned(Map<TopicPartition, Long> assignments, ConsumerSeekCallback callback)`,
+  `onPartitionsRevoked(Collection<TopicPartition>)`,
+  `onIdleContainer(Map<TopicPartition, Long>, ConsumerSeekCallback)`, `onFirstPoll()`,
+  `unregisterSeekCallback()`.
+- `ConsumerSeekCallback` declares `seek(String, int, long)`,
+  `seek(String, int, Function<Long, Long>)`, `seekToBeginning(String, int)`,
+  `seekToEnd(String, int)`, `seekRelative(String, int, long, boolean)`,
+  `seekToTimestamp(String, int, long)` and `seekToTimestamp(Collection<TopicPartition>, long)`
+  as abstract; `seekToBeginning(Collection<TopicPartition>)`,
+  `seekToEnd(Collection<TopicPartition>)` and `getGroupId()` are `default`.
+- The reference chapter gives this exact snippet for "processing a compacted topic and you wish
+  to seek to the beginning every time the application is started":
+
+  ```java
+  @Override
+  public void onPartitionsAssigned(Map<TopicPartition, Long> assignments, ConsumerSeekCallback callback) {
+      callback.seekToBeginning(assignments.keySet());
+  }
+  ```
+
+  `payment-service`'s `AccountOpenedKafkaListener` is that snippet verbatim. Note the
+  consequence for the handler behind such a listener: it must be a genuinely idempotent
+  projection, and it must **not** be wrapped in `common-messaging`'s `IdempotentHandler` —
+  `processed_event` lives in the same database as the projection, so the dedupe would skip every
+  event of the very rebuild the seek exists to perform.
+- `AbstractConsumerSeekAware` (a convenience base class that manages the callback per thread)
+  still exists if a later phase needs to seek at arbitrary times rather than only on assignment.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

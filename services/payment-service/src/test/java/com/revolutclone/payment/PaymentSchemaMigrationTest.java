@@ -59,7 +59,7 @@ class PaymentSchemaMigrationTest {
     }
 
     private static final Set<String> EXPECTED_TABLES = Set.of(
-            "payment", "outbox_event", "processed_event", "flyway_schema_history");
+            "payment", "account_view", "outbox_event", "processed_event", "flyway_schema_history");
 
     @Autowired
     private DataSource dataSource;

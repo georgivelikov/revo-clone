@@ -2,6 +2,8 @@ package com.revolutclone.payment;
 
 import com.revolutclone.payment.domain.Payment;
 import com.revolutclone.payment.domain.PaymentRepository;
+import com.revolutclone.payment.readmodel.AccountView;
+import com.revolutclone.payment.readmodel.AccountViewRepository;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
@@ -17,8 +19,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * account-service and ledger-service.
  */
 @SpringBootApplication
-@EntityScan(basePackageClasses = Payment.class)
-@EnableJpaRepositories(basePackageClasses = PaymentRepository.class)
+@EntityScan(basePackageClasses = {Payment.class, AccountView.class})
+@EnableJpaRepositories(basePackageClasses = {PaymentRepository.class, AccountViewRepository.class})
 public class PaymentServiceApplication {
 
     public static void main(String[] args) {
