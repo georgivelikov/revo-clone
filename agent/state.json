@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "02.10",
+  "current": "02.11",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 3.9853987,
@@ -621,10 +621,10 @@
         "ReconciliationDetectsDriftTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/02.10-reconciliation-job-admin-trigger",
-      "commit": null,
+      "commit": "1213402",
       "costUsd": 0,
       "notes": null
     },
