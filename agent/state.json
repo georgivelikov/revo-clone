@@ -4,7 +4,7 @@
   "current": "03.7",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 66.5988087,
+    "totalSpentUsd": 68.81343890000001,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -783,8 +783,8 @@
       "attempts": 0,
       "branch": "task/03.7-web-scaffold-tailwind-oidc-app-shell",
       "commit": "8317f3c",
-      "costUsd": 2.12,
-      "notes": "Vite + React 19 + TS scaffold via `npm create vite@latest -- --template react-ts`, then Tailwind v4 (CSS-first @theme design tokens in src/index.css: dark palette, accent, positive/negative/pending semantics, 430px shell max-width), react-oidc-context wired to the existing revolut-web Keycloak client (public, PKCE, redirect_uri = window.location.origin so no dedicated /callback route is needed), RequireAuth gate + LoginScreen, and an AppShell with a react-router-dom bottom tab bar (Home/Transfer/Activity, plus an /activity/:paymentId detail route). Home/Transfer/Activity screens are placeholders - 03.8/03.9 wire them to real data. Verified: `npm run build` (tsc -b + vite build) and `npm run lint` (oxlint) clean, dev server smoke-tested with curl, root `mvn -q clean verify` still green (frontend-only change). No named tests for this task; total test count unchanged."
+      "costUsd": 4.3346302,
+      "notes": "Vite + React 19 + TS scaffold via `npm create vite@latest -- --template react-ts`, then Tailwind v4 (CSS-first @theme design tokens in src/index.css: dark palette, accent, positive/negative/pending semantics, 430px shell max-width), react-oidc-context wired to the existing revolut-web Keycloak client (public, PKCE, redirect_uri = window.location.origin so no dedicated /callback route is needed), RequireAuth gate + LoginScreen, and an AppShell with a react-router-dom bottom tab bar (Home/Transfer/Activity, plus an /activity/:paymentId detail route). Home/Transfer/Activity screens are placeholders - 03.8/03.9 wire them to real data. Verified: `npm run build` (tsc -b + vite build) and `npm run lint` (oxlint) clean, dev server smoke-tested with curl, root `mvn -q clean verify` still green (frontend-only change). No named tests for this task; total test count unchanged. Re-verified in a follow-up session: an earlier `mvn clean verify` invocation was left running past its shell timeout and got backgrounded; the harness's kill of that background task didn't reach the underlying forked java.exe on Windows, so it kept the freshly-built common-money-*.jar locked open for several minutes and every `clean` (mine and the Stop-hook gate's) failed on that file until the orphaned process finally finished on its own and released the handle. No source change was needed - once the lock cleared, `mvn -q clean verify` passed clean on the first try."
     },
     {
       "id": "03.8",
