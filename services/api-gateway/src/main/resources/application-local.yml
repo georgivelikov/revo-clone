@@ -18,6 +18,7 @@ revolut:
     routes:
       identity-service-uri: http://127.0.0.1:8081
       account-service-uri: http://127.0.0.1:8082
+      payment-service-uri: http://127.0.0.1:8084
 
 logging:
   structured:

@@ -42,6 +42,17 @@ spring:
                     redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@userKeyResolver}"
+            - id: payment-service
+              uri: ${revolut.gateway.routes.payment-service-uri}
+              predicates:
+                - Path=/api/payments/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
 revolut:
   security:
@@ -52,6 +63,17 @@ revolut:
     routes:
       identity-service-uri: ${IDENTITY_SERVICE_URI}
       account-service-uri: ${ACCOUNT_SERVICE_URI}
+      payment-service-uri: ${PAYMENT_SERVICE_URI}
+    idempotency:
+      # Money-moving POSTs the edge idempotency filter guards. Exact paths, not /**: the filter
+      # only needs to cover requests a downstream service will actually accept, and Spring's
+      # PathPattern does not treat "/api/payments/" as a match for "/api/payments" - neither does
+      # payment-service's own mapping, so nothing can slip past by adding a slash.
+      paths: ${IDEMPOTENCY_PATHS:/api/payments}
+      # 24 h, per plans/phase-03-payments-and-ui.md.
+      ttl: ${IDEMPOTENCY_TTL:24h}
+      max-key-length: ${IDEMPOTENCY_MAX_KEY_LENGTH:200}
+      max-buffered-bytes: ${IDEMPOTENCY_MAX_BUFFERED_BYTES:65536}
     rate-limiter:
       # Per-user token bucket, shared across every route. Overridden down to 1/1 in
       # GatewayRateLimitTest so a two-request burst deterministically exhausts it.

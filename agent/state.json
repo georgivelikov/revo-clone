@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "03.4",
+  "current": "03.5",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 19.850899700000003,
+    "totalSpentUsd": 31.977670200000002,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -720,11 +720,11 @@
         "ZeroSumAfterTransfersTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/03.4-ledger-consumer-for-paymentinitiatedv1",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "c36d831",
+      "costUsd": 12.1267705,
       "notes": null
     },
     {
@@ -741,7 +741,7 @@
         "SameKeyDifferentBodyTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/03.5-gateway-idempotency-filter-with-redis",
       "commit": null,

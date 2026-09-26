@@ -28,6 +28,10 @@ services:
       OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
       IDENTITY_SERVICE_URI: http://identity-service:8081
       ACCOUNT_SERVICE_URI: http://account-service:8082
+      # payment-service joins this file in task 03.12; the route target is set now because the
+      # gateway needs it at startup and because the edge idempotency filter guards
+      # POST /api/payments.
+      PAYMENT_SERVICE_URI: http://payment-service:8084
       CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
     depends_on:
       redis:

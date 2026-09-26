@@ -500,6 +500,39 @@ not grant — so these signatures come from the published docs rather than the a
 - `AbstractConsumerSeekAware` (a convenience base class that manages the callback per thread)
   still exists if a later phase needs to seek at arbitrary times rather than only on assignment.
 
+## A gateway `GlobalFilter` that wants to see the response body must order below `-1`
+
+Verified empirically on gateway 5.0.3 (task 03.5, the edge idempotency filter, which has to store
+the downstream response in Redis to replay it for a duplicate). `org.springframework.cloud.gateway.filter.GlobalFilter`
+is still at that package in 5.0.3 - as with `route.*` and `filter.ratelimit.*` above, only the
+artifact id and the property prefix moved in the `-server-webflux` split.
+
+The trap is ordering. Global filters and a route's own filters are merged into one chain sorted
+ascending by order, and `NettyWriteResponseFilter` sits at **-1**: it calls `chain.filter(exchange)`
+and then, in its post-processing, writes the downstream response into the `exchange.getResponse()`
+of **the exchange it was handed**. `ServerWebExchange.mutate()` produces a *new* exchange, so a
+response decorator installed by a filter with a *higher* order (i.e. one that runs nested inside
+`NettyWriteResponseFilter`) is simply not the object that filter writes to, and captures nothing -
+silently, with no error. A filter that needs to observe or rewrite the response body must therefore
+order **below -1** (`IdempotencyFilter` uses -100). Note the consequence: it then also runs before
+the per-route `RequestRateLimiter` (YAML route filters order from 1 upwards), so such a filter sees
+a 429 the rate limiter produced and has to treat it as its own outcome.
+
+Two more practical points from the same task:
+
+- **Don't declare a second `ReactiveStringRedisTemplate` bean in a gateway service.** Spring Cloud
+  Gateway's auto-configured `RedisRateLimiter` injects one by type; adding another makes that
+  injection ambiguous and breaks the rate limiter at context startup. The corollary is the useful
+  half: because `RedisRateLimiter` needs one, a gateway with
+  `spring-boot-starter-data-redis-reactive` on the classpath provably already has a
+  `ReactiveStringRedisTemplate` bean to inject.
+- **For copying a request or response body, use `DataBufferUtils.join(...)` plus
+  `DataBuffer.read(byte[])` and `bufferFactory().wrap(byte[])`.** The per-buffer peek that most
+  Boot-3-era gateway examples show relies on `DataBuffer.asByteBuffer()` / `toByteBuffer()`, both
+  deprecated since Spring Framework 6.0.5 and so on borrowed time in Framework 7; `read(byte[])`
+  and `wrap(byte[])` are not deprecated. Joining also needs the empty case handled explicitly - an
+  empty body publisher joins to an empty `Mono`, and the response still has to be completed.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
