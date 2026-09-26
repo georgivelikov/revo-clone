@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './auth/RequireAuth'
+import { DevDrawer } from './dev/DevDrawer'
 import { usePaymentPolling } from './hooks/usePaymentPolling'
 import { AppShell } from './layout/AppShell'
 import { ActivityDetailScreen } from './screens/ActivityDetailScreen'
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>
+      <DevDrawer />
     </RequireAuth>
   )
 }

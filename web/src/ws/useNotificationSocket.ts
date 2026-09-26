@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import type { PaymentResponse } from '../api/payments'
+import { recordDevEvent } from '../dev/eventLog'
 import { PAYMENTS_FEED_QUERY_KEY } from '../hooks/usePaymentsFeed'
 import { PAYMENT_COMPLETED, TRANSFER_FAILED } from './clientEvent'
 import type { ClientEvent } from './clientEvent'
@@ -65,10 +66,14 @@ export function useNotificationSocket(): void {
     if (!auth.isAuthenticated) {
       return
     }
-    const socket = new NotificationSocket(
-      () => accessTokenRef.current,
-      (event) => applyClientEvent(queryClient, event),
-    )
+    const socket = new NotificationSocket(() => accessTokenRef.current, (event) => {
+      // The check happens at the call site, not inside recordDevEvent, so a production build's
+      // dead-code elimination can drop the dev-drawer module from the bundle entirely.
+      if (import.meta.env.DEV) {
+        recordDevEvent(event)
+      }
+      applyClientEvent(queryClient, event)
+    })
     socket.connect()
     return () => socket.disconnect()
   }, [auth.isAuthenticated, queryClient])
