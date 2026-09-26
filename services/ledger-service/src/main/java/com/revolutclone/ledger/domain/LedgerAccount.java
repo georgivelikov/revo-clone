@@ -47,6 +47,17 @@ public class LedgerAccount implements Persistable<UUID> {
     @Column(nullable = false, length = 3, columnDefinition = "char(3)")
     private String currency;
 
+    /**
+     * The {@code account-service} account this ledger account holds the money for, or
+     * {@code null} for a system account that has no counterpart there. The only reason the
+     * ledger stores an identifier belonging to another service: {@code PaymentInitiatedV1} names
+     * its two sides by account-service account id, and {@code owner_ref} ({@code user:<userId>})
+     * cannot tell one of a user's wallets from another. See
+     * {@code V6__ledger_account_external_ref.sql}.
+     */
+    @Column(name = "external_account_id")
+    private UUID externalAccountId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -55,10 +66,16 @@ public class LedgerAccount implements Persistable<UUID> {
     }
 
     public LedgerAccount(UUID id, String ownerRef, LedgerAccountType type, String currency) {
+        this(id, ownerRef, type, currency, null);
+    }
+
+    public LedgerAccount(UUID id, String ownerRef, LedgerAccountType type, String currency,
+            UUID externalAccountId) {
         this.id = id;
         this.ownerRef = ownerRef;
         this.type = type;
         this.currency = currency;
+        this.externalAccountId = externalAccountId;
     }
 
     @PrePersist
@@ -88,6 +105,10 @@ public class LedgerAccount implements Persistable<UUID> {
 
     public String getCurrency() {
         return currency;
+    }
+
+    public UUID getExternalAccountId() {
+        return externalAccountId;
     }
 
     public Instant getCreatedAt() {

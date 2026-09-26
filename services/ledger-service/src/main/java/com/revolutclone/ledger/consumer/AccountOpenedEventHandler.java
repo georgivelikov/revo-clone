@@ -25,10 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link AccountOpenedKafkaListener}).
  *
  * <p>{@code owner_ref} is {@code "user:" + userId}, matching the convention every user-owned
- * {@link LedgerAccount} in this codebase uses (see every test in this module) - the ledger does
- * not know about account-service's own {@code accountId}, only the user who owns the money, per
- * the phase's boundary rule that this service stays ignorant of payments/cards/FX beyond
- * balanced entries and reservations.
+ * {@link LedgerAccount} in this codebase uses (see every test in this module) - it names the
+ * <em>owner</em>, per the phase's boundary rule that this service stays ignorant of
+ * payments/cards/FX beyond balanced entries and reservations. It deliberately does not identify
+ * one of a user's several wallets, which is why {@code external_account_id} exists alongside it
+ * (task 03.4): the transfer saga's events name their accounts by account-service account id, and
+ * that column is the only place this service records the correspondence it already publishes in
+ * {@link LedgerAccountCreatedV1}.
  */
 @Component
 public class AccountOpenedEventHandler implements EventHandler<AccountOpenedV1> {
@@ -52,8 +55,12 @@ public class AccountOpenedEventHandler implements EventHandler<AccountOpenedV1> 
         AccountOpenedV1 event = envelope.payload();
         LedgerAccountType type = mapType(event.type());
 
+        // event.accountId() is stored as external_account_id, not just echoed back on
+        // LedgerAccountCreatedV1: it is what lets the PaymentInitiatedV1 consumer resolve the two
+        // account-service account ids on a transfer to ledger accounts locally, with no call to
+        // account-service. See V6__ledger_account_external_ref.sql.
         LedgerAccount ledgerAccount = new LedgerAccount(UUID.randomUUID(), "user:" + event.userId(), type,
-                event.currency());
+                event.currency(), event.accountId());
         ledgerAccountRepository.save(ledgerAccount);
 
         AccountBalance balance = new AccountBalance(ledgerAccount.getId(), event.currency());

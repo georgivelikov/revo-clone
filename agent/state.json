@@ -720,7 +720,7 @@
         "ZeroSumAfterTransfersTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/03.4-ledger-consumer-for-paymentinitiatedv1",
       "commit": null,

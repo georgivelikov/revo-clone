@@ -29,7 +29,16 @@ public class KafkaEventHandlerAdapter<T extends DomainEvent> {
     }
 
     public void onMessage(String rawJson) {
-        JsonNode node = jsonMapper.readTree(rawJson);
+        onMessage(jsonMapper.readTree(rawJson));
+    }
+
+    /**
+     * For a topic carrying more than one event type, where {@link EventTypeRouter} has already
+     * parsed the envelope to read its {@code type} and decide which adapter to hand it to.
+     * Deliberately takes the parsed tree rather than the raw string so routing costs one parse,
+     * not two.
+     */
+    void onMessage(JsonNode node) {
         EventEnvelope<T> envelope = new EventEnvelope<>(
                 UUID.fromString(node.get("eventId").asString()),
                 Instant.parse(node.get("occurredAt").asString()),
