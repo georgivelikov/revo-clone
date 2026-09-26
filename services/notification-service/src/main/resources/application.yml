@@ -1,0 +1,65 @@
+server:
+  port: ${SERVER_PORT:8088}
+
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: ${NOTIFICATION_DB_URL}
+    username: ${NOTIFICATION_DB_USER}
+    password: ${NOTIFICATION_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway owns the schema. Never raise this.
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/notification
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+
+revolut:
+  security:
+    roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  notifications:
+    websocket:
+      # The handshake URL. A browser cannot set an Authorization header on a WebSocket
+      # handshake, so this endpoint is permitted by the security filter chain and authenticated
+      # instead by the single-use ticket in the `ticket` query parameter - see
+      # WebSocketTicketStore and TicketHandshakeInterceptor.
+      path: ${WS_PATH:/ws}
+      # CORS on the WebSocket upgrade is configured separately from HTTP CORS (the gateway owns
+      # that one), so the browser origin has to be named here too. Comma-separated.
+      allowed-origins: ${WS_ALLOWED_ORIGINS}
+    ticket:
+      # 30 seconds, per plans/phase-03-payments-and-ui.md: long enough to open a socket,
+      # short enough that a leaked ticket is worthless. Single-use as well as short-lived.
+      ttl: ${WS_TICKET_TTL:30s}
+    feed:
+      # How many persisted notifications GET /api/notifications returns.
+      page-size: ${NOTIFICATION_FEED_PAGE_SIZE:50}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash

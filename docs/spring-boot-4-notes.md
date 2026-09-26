@@ -533,6 +533,58 @@ Two more practical points from the same task:
   and `wrap(byte[])` are not deprecated. Joining also needs the empty case handled explicitly - an
   empty body publisher joins to an empty `Mono`, and the response still has to be completed.
 
+## STOMP over WebSocket in Framework 7: API unchanged, but the user-destination prefix needs its trailing slash
+
+Sources, all rendering as "Spring Framework 7.0.9": the STOMP enable chapter
+<https://docs.spring.io/spring-framework/reference/web/websocket/stomp/enable.html>, the user
+destinations chapter
+<https://docs.spring.io/spring-framework/reference/web/websocket/stomp/user-destination.html>, the
+WebSocket server chapter <https://docs.spring.io/spring-framework/reference/web/websocket/server.html>,
+and the javadoc for `StompWebSocketEndpointRegistration`, `MessageBrokerRegistry`,
+`SimpMessagingTemplate` and `WebSocketStompClient`. Verified for task 03.6
+(`notification-service`); the jars could not be unzipped in that session, so these come from the
+published docs.
+
+The whole surface is structurally identical to Boot 3, which is worth stating because it is the
+first Spring area in this project where a Boot-3-era example is directly usable:
+
+- `@EnableWebSocketMessageBroker` and `WebSocketMessageBrokerConfigurer` are still in
+  `org.springframework.web.socket.config.annotation`, with `registerStompEndpoints(StompEndpointRegistry)`
+  and `configureMessageBroker(MessageBrokerRegistry)`.
+- `StompWebSocketEndpointRegistration` still declares `setAllowedOrigins(String...)`,
+  `setAllowedOriginPatterns(String...)`, `addInterceptors(HandshakeInterceptor...)`,
+  `setHandshakeHandler(HandshakeHandler)` and `withSockJS()`.
+- `HandshakeInterceptor` (`org.springframework.web.socket.server`) is unchanged, and
+  `DefaultHandshakeHandler` (`org.springframework.web.socket.server.support`) still exposes
+  `protected Principal determineUser(ServerHttpRequest, WebSocketHandler, Map<String, Object>)` —
+  the documented way to resolve a session's user during the handshake, which is what a
+  ticket-authenticated WebSocket needs since `request.getPrincipal()` is anonymous there.
+- `WebSocketStompClient` offers only `connectAsync(...)` returning `CompletableFuture<StompSession>`
+  (four overloads); the Boot-3-era `ListenableFuture`-returning `connect(...)` is gone.
+
+**The trap: `MessageBrokerRegistry.setUserDestinationPrefix("/user")` silently breaks every push.**
+The javadoc says the default is `"/user/"`, *with* the trailing slash, and only
+`setApplicationDestinationPrefixes` documents that "prefixes that do not have a trailing slash will
+have one automatically appended". `SimpMessagingTemplate.convertAndSendToUser(user, destination, payload)`
+concatenates prefix + user + destination, so a prefix of `"/user"` produces
+`/user<uuid>/queue/events`, which `DefaultUserDestinationResolver` cannot resolve. The only symptom
+is a TRACE line — `No active sessions for user destination: ...` — and otherwise total, silent
+non-delivery, exactly as `plans/phase-03-payments-and-ui.md`'s Risks & gotchas warns. Always write
+`"/user/"`. `org.springframework.messaging` at TRACE is the tool that finds this: it logs
+`Translated <in> -> [<out>]` for both the SUBSCRIBE rewrite and the outbound message.
+
+Two smaller facts from the same task:
+
+- **A Jackson 3 JSON converter is auto-configured for the broker.** `convertAndSendToUser` with a
+  record payload produces `content-type: application/json` with no converter wiring at all;
+  `org.springframework.messaging.converter.JacksonJsonMessageConverter` is the Framework 7 (Jackson 3)
+  replacement for the now-deprecated `MappingJackson2MessageConverter`, and `AbstractJsonMessageConverter`
+  is its base class.
+- **A test STOMP client must not use `StringMessageConverter` for those frames.** It supports
+  `text/plain` only, so it refuses an `application/json` frame and `handleFrame` is simply never
+  called — the frame arrives (visible in the client's own TRACE log) and the test still sees nothing.
+  Take `byte[].class` as the payload type with the default `SimpleMessageConverter` instead.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

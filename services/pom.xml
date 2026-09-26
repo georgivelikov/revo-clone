@@ -25,6 +25,7 @@
     <module>account-service</module>
     <module>ledger-service</module>
     <module>payment-service</module>
+    <module>notification-service</module>
   </modules>
 
   <build>
