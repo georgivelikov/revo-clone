@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "03.6",
+  "current": "03.7",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 62.8429792,
+    "totalSpentUsd": 66.5988087,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -764,8 +764,8 @@
       "status": "done",
       "attempts": 2,
       "branch": "task/03.6-notification-service",
-      "commit": "19d8aee",
-      "costUsd": 20.51989,
+      "commit": "72465ce",
+      "costUsd": 24.2757195,
       "notes": "Two sessions. The first hit the five-hour usage limit mid-task (63 turns) and its two retries were rejected outright by the same limit (total_cost_usd 0, 1 turn each), so the gate saw the same unfinished diff three times - see agent/log/03.6.jsonl rate_limit_event entries; reset to pending rather than treated as a harness or spec defect. The second session, after the limit reset, wrote the service and committed it as 19d8aee, but the run ended before state.json was marked done (status stayed in_progress, commit null), so this task looked unfinished while its work was already on the branch. This session verified 19d8aee against the phase rather than rewriting it: tripwire clean, mvn clean verify green, WebSocketTicketTest 6 tests / 0 failures. Note for the driver: `mvn -q clean verify` fails with a locked platform/contracts jar if a second Maven run (a gate from an earlier session, or an abandoned background build) is still alive - that failure is a concurrent build, not a code defect."
     },
     {
@@ -779,12 +779,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/03.7-web-scaffold-tailwind-oidc-app-shell",
-      "commit": null,
-      "costUsd": 0,
-      "notes": null
+      "commit": "8317f3c",
+      "costUsd": 2.12,
+      "notes": "Vite + React 19 + TS scaffold via `npm create vite@latest -- --template react-ts`, then Tailwind v4 (CSS-first @theme design tokens in src/index.css: dark palette, accent, positive/negative/pending semantics, 430px shell max-width), react-oidc-context wired to the existing revolut-web Keycloak client (public, PKCE, redirect_uri = window.location.origin so no dedicated /callback route is needed), RequireAuth gate + LoginScreen, and an AppShell with a react-router-dom bottom tab bar (Home/Transfer/Activity, plus an /activity/:paymentId detail route). Home/Transfer/Activity screens are placeholders - 03.8/03.9 wire them to real data. Verified: `npm run build` (tsc -b + vite build) and `npm run lint` (oxlint) clean, dev server smoke-tested with curl, root `mvn -q clean verify` still green (frontend-only change). No named tests for this task; total test count unchanged."
     },
     {
       "id": "03.8",
