@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Revolut-style dark theme, single accent, semantic colours for
+ * money movement (credit/debit) kept distinct from the general palette so
+ * activity feeds and balances read at a glance.
+ */
+@theme {
+  --color-canvas: #0b0b0f;
+  --color-surface: #16161d;
+  --color-surface-raised: #1f1f29;
+  --color-border: #2a2a35;
+
+  --color-foreground: #f5f5f7;
+  --color-muted: #9a9aa5;
+  --color-subtle: #5c5c66;
+
+  --color-accent: #7c5cfc;
+  --color-accent-hover: #6c4ce6;
+
+  --color-positive: #00d296;
+  --color-negative: #ff5c5c;
+  --color-pending: #f5a623;
+
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+
+  --shell-max-width: 430px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
