@@ -65,6 +65,23 @@ spring:
                     redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@userKeyResolver}"
+            # Only the ticket endpoint and the persisted feed - never /ws itself. The WebSocket
+            # handshake is a different mechanism (Origin-checked on notification-service via
+            # WS_ALLOWED_ORIGINS, not HTTP CORS) and the browser opens it directly - see
+            # web/src/ws/notificationSocket.ts. Routing it through this reactive gateway too
+            # would work, but nothing here needs it to, and GatewaySecurityConfig's CORS/JWT
+            # filter chain is built for request/response HTTP, not a long-lived upgraded socket.
+            - id: notification-service
+              uri: ${revolut.gateway.routes.notification-service-uri}
+              predicates:
+                - Path=/api/notifications/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
 revolut:
   security:
@@ -77,6 +94,7 @@ revolut:
       account-service-uri: ${ACCOUNT_SERVICE_URI}
       payment-service-uri: ${PAYMENT_SERVICE_URI}
       ledger-service-uri: ${LEDGER_SERVICE_URI}
+      notification-service-uri: ${NOTIFICATION_SERVICE_URI}
     idempotency:
       # Money-moving POSTs the edge idempotency filter guards. Exact paths, not /**: the filter
       # only needs to cover requests a downstream service will actually accept, and Spring's

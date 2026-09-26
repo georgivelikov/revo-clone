@@ -36,6 +36,10 @@ services:
       # 02 never added one). The route target is set now, same reasoning as PAYMENT_SERVICE_URI
       # above, so the gateway's own startup does not depend on unrelated compose wiring.
       LEDGER_SERVICE_URI: http://ledger-service:8083
+      # notification-service joins this file in task 03.12, same as payment-service above. Its
+      # route only ever carries the ticket endpoint and the persisted feed - the WebSocket
+      # handshake itself bypasses this gateway on purpose (see application.yml's route comment).
+      NOTIFICATION_SERVICE_URI: http://notification-service:8088
       CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
     depends_on:
       redis:

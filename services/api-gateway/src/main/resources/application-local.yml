@@ -20,6 +20,7 @@ revolut:
       account-service-uri: http://127.0.0.1:8082
       payment-service-uri: http://127.0.0.1:8084
       ledger-service-uri: http://127.0.0.1:8083
+      notification-service-uri: http://127.0.0.1:8088
 
 logging:
   structured:
