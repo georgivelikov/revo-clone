@@ -4,7 +4,7 @@
   "current": "03.6",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 47.80334920000001,
+    "totalSpentUsd": 62.8429792,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -761,12 +761,12 @@
         "WebSocketTicketTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
-      "attempts": 0,
+      "status": "done",
+      "attempts": 2,
       "branch": "task/03.6-notification-service",
-      "commit": null,
-      "costUsd": 5.480260000000001,
-      "notes": "Diagnosed, not a real 3-strikes: attempt 1 hit the five-hour session usage limit mid-task (63 turns, utilization 0.78->1.0) leaving NotificationServiceApplication.java referencing domain/readmodel classes it never got to write; attempts 2-3 were rejected outright by the same limit (total_cost_usd 0, 1 turn each) so the gate saw the identical unfinished diff three times. Reset to pending/0 after the limit reset rather than treating this as a harness or spec defect - see agent/log/03.6.jsonl rate_limit_event entries."
+      "commit": "19d8aee",
+      "costUsd": 20.51989,
+      "notes": "Two sessions. The first hit the five-hour usage limit mid-task (63 turns) and its two retries were rejected outright by the same limit (total_cost_usd 0, 1 turn each), so the gate saw the same unfinished diff three times - see agent/log/03.6.jsonl rate_limit_event entries; reset to pending rather than treated as a harness or spec defect. The second session, after the limit reset, wrote the service and committed it as 19d8aee, but the run ended before state.json was marked done (status stayed in_progress, commit null), so this task looked unfinished while its work was already on the branch. This session verified 19d8aee against the phase rather than rewriting it: tripwire clean, mvn clean verify green, WebSocketTicketTest 6 tests / 0 failures. Note for the driver: `mvn -q clean verify` fails with a locked platform/contracts jar if a second Maven run (a gate from an earlier session, or an abandoned background build) is still alive - that failure is a concurrent build, not a code defect."
     },
     {
       "id": "03.7",
