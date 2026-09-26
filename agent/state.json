@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "03.8",
+  "current": "03.9",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 70.98406790000001,
+    "totalSpentUsd": 74.64873510000001,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -797,11 +797,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/03.8-home-screen-wired-to-get-api-accounts",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "fa39452",
+      "costUsd": 3.0669427000000002,
       "notes": null
     },
     {
@@ -815,12 +815,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/03.9-transfer-flow-with-client-generated",
       "commit": null,
-      "costUsd": 0,
-      "notes": null
+      "costUsd": 0.5977245000000001,
+      "notes": "Same false 3-strikes as 03.6: all 3 attempts hit the five-hour session usage limit (api_error 429) - attempt 1 spent 29 turns/$0.60 without writing any file before being cut off, attempts 2-3 were rejected outright (0 cost, 1 turn). No partial work exists to preserve (git diff was empty throughout). Reset to pending/0 after the limit reset - see agent/log/03.9.jsonl."
     },
     {
       "id": "03.10",
