@@ -48,13 +48,25 @@ try {
     else                           { Pass "config hygiene: $($configFiles.Count) config file(s), no localhost leaks" }
 
     # --- 2. containers healthy --------------------------------------------------------
-    $composeFiles = @(Get-ChildItem -Path $repo -File -Filter 'docker-compose*.y*ml' -ErrorAction SilentlyContinue)
+    # Sorted so the base `docker-compose.yml` loads last, same order its own header comment
+    # documents (`-f docker-compose.infra.yml -f docker-compose.yml`) - later `-f` files can
+    # override earlier ones, so this must match how a human or CI would actually invoke it.
+    $composeFiles = @(Get-ChildItem -Path $repo -File -Filter 'docker-compose*.y*ml' -ErrorAction SilentlyContinue |
+                      Sort-Object -Property @{ Expression = { $_.Name -eq 'docker-compose.yml' } }, Name)
+    $composeArgs = @()
+    foreach ($f in $composeFiles) { $composeArgs += @('-f', $f.Name) }
     if ($composeFiles.Count -eq 0) {
         Skip 'containers: no docker-compose file yet'
     } elseif (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         Fail 'containers: docker is not on PATH'
     } else {
-        $psJson = & docker compose ps --format json 2>&1 | Out-String
+        # A bare `docker compose ps` (no -f) still lists every container under the directory's
+        # default project name regardless of which file declared it, so this happened to pass
+        # before $composeArgs existed - but a *service-name-filtered* query below does not: it
+        # validates the name against whichever compose files are actually loaded. Passing every
+        # discovered file explicitly here too, rather than relying on that asymmetry, is what
+        # makes the two checks consistent.
+        $psJson = & docker compose @composeArgs ps --format json 2>&1 | Out-String
         if ($LASTEXITCODE -ne 0 -or -not $psJson.Trim()) {
             Fail 'containers: `docker compose ps` returned nothing - is the stack up?'
         } else {
@@ -89,7 +101,7 @@ try {
             if ($line -match '--topic\s+([A-Za-z0-9._-]+)') { $declared += $Matches[1] }
         }
         $declared = @($declared | Sort-Object -Unique)
-        $kafkaCid = (& docker compose ps -q kafka 2>$null | Select-Object -First 1)
+        $kafkaCid = (& docker compose @composeArgs ps -q kafka 2>$null | Select-Object -First 1)
         if (-not $kafkaCid) {
             Fail 'topics: the kafka container is not running'
         } else {

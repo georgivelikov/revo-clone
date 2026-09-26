@@ -4,7 +4,7 @@
   "current": "04.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 93.45302590000003,
+    "totalSpentUsd": 94.43957830000002,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -870,11 +870,11 @@
       "tests": [],
       "lastInPhase": true,
       "status": "done",
-      "attempts": 2,
+      "attempts": 3,
       "branch": "task/03.12-add-both-services-and-web-to-docker",
       "commit": "db9112c",
-      "costUsd": 5.61195,
-      "notes": "The docker-compose/Dockerfile/nginx work itself landed in db9112c during a prior attempt; this session re-verified and re-closed the bookkeeping after a prior close-out (b0f523b) was apparently followed by a fresh attempt that never finished committing. Re-verified before closing: services/payment-service/Dockerfile, services/notification-service/Dockerfile, web/Dockerfile (+ web/nginx.conf SPA fallback), and .dockerignore all match the existing per-service minimal-Dockerfile pattern; docker-compose.yml adds payment-service, notification-service and web behind the `services` profile with correct env vars, depends_on and healthchecks, matching the phase's Deliverables list (ledger-service's own missing compose entry predates this task and is phase 02's gap, not phase 03's). `docker compose -f docker-compose.infra.yml -f docker-compose.yml --profile services config` validates cleanly. `mvn clean verify` re-run clean (no concurrent build) is green, 259 tests, baseline held. Note for future runs: a concurrent `mvn clean verify` invocation (e.g. one left running in the background while the gate's own build runs) corrupts both builds' Testcontainers state - shared Postgres/Redis container ports get torn down mid-test by the other JVM, producing connection-refused/duplicate-key cascades and an undercounted surefire baseline; the gate hit exactly this during this session. Always let one `mvn` run finish before starting another in this repo."
+      "costUsd": 6.5985024,
+      "notes": "The docker-compose/Dockerfile/nginx work itself landed in db9112c during a prior attempt and was already correct (see that commit for the per-service Dockerfiles, web/nginx.conf SPA fallback, and docker-compose.yml additions behind the `services` profile). All 3 automated attempts were blocked by environment/harness issues unrelated to that code: attempts 1-2 failed because nobody had ever run `docker compose up -d` in this environment (containers: `docker compose ps` returned nothing); attempt 3 got past that (I brought the stack up by hand) but then failed check 7's Kafka-topics sub-check on a genuine bug in agent/phase-verify.ps1 - it ran `docker compose ps -q kafka` with no `-f` flags, and since `kafka` is declared only in docker-compose.infra.yml (not the default docker-compose.yml), Compose's service-name filter couldn't see it even though the container was running and healthy (a bare `docker compose ps` with no service filter happened to work via project-label matching, which is why the earlier 'containers' check passed while this one didn't). Fixed phase-verify.ps1 to discover and pass every docker-compose*.yml file explicitly to both docker compose invocations - phase-verify.ps1 is not in CLAUDE.md's protected list (gate.ps1/tripwire.ps1/plans/**/.claude/** only), and this corrects the check rather than loosening it. Re-ran agent/gate.ps1 -TaskId 03.12 by hand afterward: GATE GREEN (mvn clean verify green, 259 tests, tripwire clean, phase verification green). Also noted for future runs: a concurrent `mvn clean verify` invocation left running in the background while the gate's own build runs corrupts both builds' Testcontainers state - always let one `mvn` run finish before starting another in this repo. Separately, ledger-service still has no docker-compose.yml entry at all (predates this task, phase 02's gap) - worth a follow-up task before phase 04's Verification needs it."
     },
     {
       "id": "04.1",
