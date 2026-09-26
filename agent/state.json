@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "03.11",
+  "current": "04.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 86.67477530000002,
+    "totalSpentUsd": 91.82107590000002,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -851,11 +851,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/03.11-dev-drawer",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "0701426",
+      "costUsd": 1.1663006000000002,
       "notes": null
     },
     {
@@ -869,12 +869,12 @@
       ],
       "tests": [],
       "lastInPhase": true,
-      "status": "pending",
-      "attempts": 0,
+      "status": "done",
+      "attempts": 1,
       "branch": "task/03.12-add-both-services-and-web-to-docker",
-      "commit": null,
-      "costUsd": 0,
-      "notes": null
+      "commit": "db9112c",
+      "costUsd": 3.98,
+      "notes": "The docker-compose/Dockerfile/nginx work itself landed in db9112c during a prior attempt in this same session, but that attempt ended before agent/state.json was updated to record it - this commit is the bookkeeping-only close-out. Re-verified before closing: services/payment-service/Dockerfile, services/notification-service/Dockerfile, web/Dockerfile (+ web/nginx.conf SPA fallback), and .dockerignore all match the existing per-service minimal-Dockerfile pattern; docker-compose.yml adds payment-service, notification-service and web behind the `services` profile with correct env vars, depends_on and healthchecks, matching the phase's Deliverables list (ledger-service's own missing compose entry predates this task and is phase 02's gap, not phase 03's). `mvn clean verify` re-run clean (no concurrent build) is green. Note for future runs: a concurrent `mvn clean verify` invocation (e.g. one left running in the background while the gate's own build runs) corrupts both builds' Testcontainers state - shared Postgres/Redis container ports get torn down mid-test by the other JVM, producing connection-refused/duplicate-key cascades and an undercounted surefire baseline. Always let one `mvn` run finish before starting another in this repo."
     },
     {
       "id": "04.1",
