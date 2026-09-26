@@ -4,7 +4,7 @@
   "current": "04.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 91.82107590000002,
+    "totalSpentUsd": 93.45302590000003,
     "totalCeilingUsd": 400.0
   },
   "tasks": [
@@ -870,11 +870,11 @@
       "tests": [],
       "lastInPhase": true,
       "status": "done",
-      "attempts": 1,
+      "attempts": 2,
       "branch": "task/03.12-add-both-services-and-web-to-docker",
       "commit": "db9112c",
-      "costUsd": 3.98,
-      "notes": "The docker-compose/Dockerfile/nginx work itself landed in db9112c during a prior attempt in this same session, but that attempt ended before agent/state.json was updated to record it - this commit is the bookkeeping-only close-out. Re-verified before closing: services/payment-service/Dockerfile, services/notification-service/Dockerfile, web/Dockerfile (+ web/nginx.conf SPA fallback), and .dockerignore all match the existing per-service minimal-Dockerfile pattern; docker-compose.yml adds payment-service, notification-service and web behind the `services` profile with correct env vars, depends_on and healthchecks, matching the phase's Deliverables list (ledger-service's own missing compose entry predates this task and is phase 02's gap, not phase 03's). `mvn clean verify` re-run clean (no concurrent build) is green. Note for future runs: a concurrent `mvn clean verify` invocation (e.g. one left running in the background while the gate's own build runs) corrupts both builds' Testcontainers state - shared Postgres/Redis container ports get torn down mid-test by the other JVM, producing connection-refused/duplicate-key cascades and an undercounted surefire baseline. Always let one `mvn` run finish before starting another in this repo."
+      "costUsd": 5.61195,
+      "notes": "The docker-compose/Dockerfile/nginx work itself landed in db9112c during a prior attempt; this session re-verified and re-closed the bookkeeping after a prior close-out (b0f523b) was apparently followed by a fresh attempt that never finished committing. Re-verified before closing: services/payment-service/Dockerfile, services/notification-service/Dockerfile, web/Dockerfile (+ web/nginx.conf SPA fallback), and .dockerignore all match the existing per-service minimal-Dockerfile pattern; docker-compose.yml adds payment-service, notification-service and web behind the `services` profile with correct env vars, depends_on and healthchecks, matching the phase's Deliverables list (ledger-service's own missing compose entry predates this task and is phase 02's gap, not phase 03's). `docker compose -f docker-compose.infra.yml -f docker-compose.yml --profile services config` validates cleanly. `mvn clean verify` re-run clean (no concurrent build) is green, 259 tests, baseline held. Note for future runs: a concurrent `mvn clean verify` invocation (e.g. one left running in the background while the gate's own build runs) corrupts both builds' Testcontainers state - shared Postgres/Redis container ports get torn down mid-test by the other JVM, producing connection-refused/duplicate-key cascades and an undercounted surefire baseline; the gate hit exactly this during this session. Always let one `mvn` run finish before starting another in this repo."
     },
     {
       "id": "04.1",
