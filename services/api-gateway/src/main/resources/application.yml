@@ -53,6 +53,18 @@ spring:
                     redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@userKeyResolver}"
+            - id: ledger-service
+              uri: ${revolut.gateway.routes.ledger-service-uri}
+              predicates:
+                - Path=/api/ledger/**
+              filters:
+                - RewritePath=/api/ledger/(?<segment>.*), /internal/ledger/${segment}
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
 revolut:
   security:
@@ -64,6 +76,7 @@ revolut:
       identity-service-uri: ${IDENTITY_SERVICE_URI}
       account-service-uri: ${ACCOUNT_SERVICE_URI}
       payment-service-uri: ${PAYMENT_SERVICE_URI}
+      ledger-service-uri: ${LEDGER_SERVICE_URI}
     idempotency:
       # Money-moving POSTs the edge idempotency filter guards. Exact paths, not /**: the filter
       # only needs to cover requests a downstream service will actually accept, and Spring's

@@ -32,6 +32,10 @@ services:
       # gateway needs it at startup and because the edge idempotency filter guards
       # POST /api/payments.
       PAYMENT_SERVICE_URI: http://payment-service:8084
+      # ledger-service has no entry of its own in this file - that gap predates this task (phase
+      # 02 never added one). The route target is set now, same reasoning as PAYMENT_SERVICE_URI
+      # above, so the gateway's own startup does not depend on unrelated compose wiring.
+      LEDGER_SERVICE_URI: http://ledger-service:8083
       CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
     depends_on:
       redis:

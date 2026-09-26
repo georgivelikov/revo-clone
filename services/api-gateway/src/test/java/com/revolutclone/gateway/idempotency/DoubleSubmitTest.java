@@ -89,6 +89,7 @@ class DoubleSubmitTest {
         registry.add("revolut.gateway.routes.payment-service-uri", downstream::uri);
         registry.add("revolut.gateway.routes.identity-service-uri", downstream::uri);
         registry.add("revolut.gateway.routes.account-service-uri", downstream::uri);
+        registry.add("revolut.gateway.routes.ledger-service-uri", downstream::uri);
     }
 
     @Test

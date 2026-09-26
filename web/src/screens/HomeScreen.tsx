@@ -1,7 +1,12 @@
 import { useAuth } from 'react-oidc-context'
+import { formatMoney } from '../api/format'
+import { useAccountsWithBalances } from '../hooks/useAccountsWithBalances'
 
 export function HomeScreen() {
   const auth = useAuth()
+  const { accounts, isLoading, isError } = useAccountsWithBalances()
+
+  const primary = accounts[0]
 
   return (
     <div className="flex flex-col gap-6 px-5 pb-6 pt-8">
@@ -23,13 +28,45 @@ export function HomeScreen() {
 
       <section className="rounded-card bg-surface p-6">
         <p className="text-sm text-muted">Total balance</p>
-        <p className="mt-1 text-3xl font-semibold text-foreground">– . –</p>
-        <p className="mt-4 text-xs text-subtle">Wired up to the accounts API in task 03.8.</p>
+        {isLoading ? (
+          <p className="mt-1 text-3xl font-semibold text-foreground">– . –</p>
+        ) : isError ? (
+          <p className="mt-1 text-lg font-medium text-negative">Could not load your accounts.</p>
+        ) : primary ? (
+          <p className="mt-1 text-3xl font-semibold text-foreground">
+            {primary.availableMinor === null
+              ? '– . –'
+              : formatMoney(primary.availableMinor, primary.currency)}
+          </p>
+        ) : (
+          <p className="mt-1 text-lg font-medium text-muted">No accounts yet.</p>
+        )}
+
+        {accounts.length > 1 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {accounts.map((account) => (
+              <span
+                key={account.id}
+                className="rounded-control bg-surface-raised px-3 py-1.5 text-xs font-medium text-muted"
+              >
+                {account.currency}
+                {' · '}
+                {account.balanceError
+                  ? 'unavailable'
+                  : account.availableMinor === null
+                    ? '…'
+                    : formatMoney(account.availableMinor, account.currency)}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       <section>
         <h2 className="text-sm font-medium text-muted">Recent activity</h2>
-        <div className="mt-3 rounded-card bg-surface p-6 text-sm text-subtle">Nothing yet.</div>
+        <div className="mt-3 rounded-card bg-surface p-6 text-sm text-subtle">
+          Wired up in task 03.9.
+        </div>
       </section>
     </div>
   )
