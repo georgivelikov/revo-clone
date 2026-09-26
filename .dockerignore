@@ -1,0 +1,9 @@
+# Keeps the build context small for every Dockerfile in this repo (all use `context: .`, the
+# repo root - see docker-compose.yml). Without this, `docker compose build` sends web's
+# node_modules and every service's Maven target/ across the daemon socket on every build, even
+# though no Dockerfile COPYs them wholesale - each one rebuilds fresh (`npm ci` / `mvn package`)
+# inside the image instead.
+**/node_modules
+**/target
+**/dist
+.git
