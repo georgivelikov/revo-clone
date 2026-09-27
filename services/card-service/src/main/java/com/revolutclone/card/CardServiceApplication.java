@@ -1,6 +1,7 @@
 package com.revolutclone.card;
 
 import com.revolutclone.card.authz.CardAuthorizationProperties;
+import com.revolutclone.card.authz.CardLimitProperties;
 import com.revolutclone.card.crypto.CardCryptoProperties;
 import com.revolutclone.card.domain.Card;
 import com.revolutclone.card.domain.CardRepository;
@@ -26,6 +27,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableConfigurationProperties({
         CardCryptoProperties.class,
         CardAuthorizationProperties.class,
+        CardLimitProperties.class,
         LedgerClientProperties.class})
 public class CardServiceApplication {
 

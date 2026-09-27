@@ -16,6 +16,7 @@ import com.revolutclone.card.readmodel.FundingWalletResolver;
 import com.revolutclone.contracts.events.AuthorizationApprovedV1;
 import com.revolutclone.contracts.events.AuthorizationDeclinedV1;
 import com.revolutclone.contracts.events.AuthorizationRequestedV1;
+import com.revolutclone.money.Money;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.YearMonth;
@@ -37,23 +38,29 @@ import org.springframework.stereotype.Service;
  * 3. expiry in the future?             -> expired      -> DECLINED(CARD_EXPIRED)
  * 4. FX if merchant currency != wallet -> fx-service rate, mark up          (task 05.5)
  * 5. limits: per-transaction, rolling daily, rolling monthly
- *                                      -> exceeded     -> DECLINED(LIMIT_EXCEEDED)  (task 05.4)
+ *                                      -> exceeded     -> DECLINED(LIMIT_EXCEEDED)
  * 6. ledger: HOLD billing amount, 7-day expiry
  *                                      -> insufficient -> DECLINED(INSUFFICIENT_FUNDS)
  * 7. -> AuthorizationApprovedV1   (or AuthorizationDeclinedV1 with the reason)
  * </pre>
  *
- * <p>Steps 4 and 5 are the two the task list assigns elsewhere - 05.5 converts a foreign-currency
- * amount and 05.4 evaluates the rolling windows - and they are marked in place below rather than
- * appended later, because their <em>position</em> is part of this task: a limit checked after the hold
- * would let a declined purchase move a balance, and an unconverted amount held on the wrong-currency
- * wallet would be wrong money, not merely a missing feature.
+ * <p>Step 4 is the one the task list still assigns elsewhere - 05.5 converts a foreign-currency amount -
+ * and it is marked in place below rather than appended later, because its <em>position</em> is part of
+ * the chain: an unconverted amount held on the wrong-currency wallet would be wrong money, not merely a
+ * missing feature. Step 5 is the same argument in the other direction. A limit evaluated after the hold
+ * would let a refused purchase move a balance, so it sits between the amount being known and the money
+ * being touched.
+ *
+ * <p><strong>Steps 5 to 7 run under {@link PerCardDecisionLock}.</strong> The limit window is computed
+ * from committed rows, so the check and the row it produces have to be indivisible per card or two
+ * simultaneous taps can both read a total that only one of them should have seen. See that class for why
+ * the partition key is the real guarantee and this is the gap it leaves.
  *
  * <p><strong>Nothing here is a hold on a decision the network is still waiting for.</strong> The
  * phase's timing note - "steps 1-6 must complete in well under a second - a real network times out
  * around 2-5 s [...] this is why the decision cannot wait on a downstream service that might be
- * slow" - is why the card, the wallet and (from 05.4) the limit window are all local reads, and why
- * the single remote call is the one whose answer the decision genuinely is.
+ * slow" - is why the card, the wallet and the limit window are all local reads, and why the single
+ * remote call is the one whose answer the decision genuinely is.
  *
  * <p><strong>{@code networkRef} is the idempotency anchor, not {@code eventId}.</strong> A network
  * resend arrives as a new message with a new {@code eventId}, so {@code common-messaging}'s
@@ -91,18 +98,23 @@ public class AuthorizationService {
     private final FundingWalletResolver wallets;
     private final LedgerReservations ledger;
     private final AuthorizationRecorder recorder;
+    private final CardLimitEvaluator limits;
+    private final PerCardDecisionLock perCardLock;
     private final CardAuthorizationProperties properties;
     private final Clock clock;
 
     public AuthorizationService(CardRepository cards, CardAuthorizationRepository authorizations,
             PanHasher panHasher, FundingWalletResolver wallets, LedgerReservations ledger,
-            AuthorizationRecorder recorder, CardAuthorizationProperties properties, Clock clock) {
+            AuthorizationRecorder recorder, CardLimitEvaluator limits, PerCardDecisionLock perCardLock,
+            CardAuthorizationProperties properties, Clock clock) {
         this.cards = cards;
         this.authorizations = authorizations;
         this.panHasher = panHasher;
         this.wallets = wallets;
         this.ledger = ledger;
         this.recorder = recorder;
+        this.limits = limits;
+        this.perCardLock = perCardLock;
         this.properties = properties;
         this.clock = clock;
     }
@@ -150,13 +162,32 @@ public class AuthorizationService {
         if (!wallet.currency().equals(currency)) {
             throw new ForeignCurrencyAuthorizationUnsupportedException(currency, wallet.currency());
         }
-        long billingMinor = request.amountMinor();
-        String billingCurrency = wallet.currency();
+        // Money from here on, not a bare long: the billing amount is about to be compared against limits
+        // in a currency of their own, and Money is what makes a mismatch impossible to do quietly.
+        Money billing = Money.of(request.amountMinor(), wallet.currency());
 
-        // 5. limits: per-transaction, then the rolling daily and monthly windows over
-        //    card_authorization (task 05.4) -> DeclineReason.LIMIT_EXCEEDED, which already exists so
-        //    that task adds an evaluator rather than widening this contract. Before the hold, because a
-        //    purchase that is refused must not move a balance.
+        // Steps 5 to 7 are one indivisible decision per card: the limit window is read from committed
+        // rows, so an interleaved second tap that checks before this one records would see a total that
+        // is already out of date. See PerCardDecisionLock.
+        return perCardLock.decide(card.getId(),
+                () -> decideWithinLimits(card, request, currency, billing, wallet, decidedAt));
+    }
+
+    private AuthorizationDecision decideWithinLimits(Card card, AuthorizationRequestedV1 request,
+            String currency, Money billing, FundingWallet wallet, Instant decidedAt) {
+
+        long billingMinor = billing.minor();
+        String billingCurrency = billing.currency().getCurrencyCode();
+
+        // 5. limits: per-transaction, then the rolling daily and monthly windows over card_authorization.
+        //    Before the hold, because a purchase that is refused must not move a balance.
+        Optional<LimitBreach> breach = limits.evaluate(card.getId(), billing, decidedAt);
+        if (breach.isPresent()) {
+            log.info("declining authorization {} on card {}: {}", request.networkRef(), card.getId(),
+                    breach.get().describe());
+            return decline(card, request, currency, billingMinor, billingCurrency,
+                    DeclineReason.LIMIT_EXCEEDED, decidedAt);
+        }
 
         // 6. hold the billing amount. The one remote call in the chain, and the one whose answer the
         //    decision is: available balance lives in the ledger and must not be mirrored here.

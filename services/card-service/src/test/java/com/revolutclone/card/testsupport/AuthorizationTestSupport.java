@@ -3,11 +3,17 @@ package com.revolutclone.card.testsupport;
 import com.revolutclone.card.consumer.AuthorizationRequestedEventHandler;
 import com.revolutclone.card.crypto.PanCipher;
 import com.revolutclone.card.crypto.PanHasher;
+import com.revolutclone.card.domain.AuthorizationState;
 import com.revolutclone.card.domain.Card;
+import com.revolutclone.card.domain.CardAuthorization;
 import com.revolutclone.card.domain.CardAuthorizationRepository;
+import com.revolutclone.card.domain.CardLimit;
+import com.revolutclone.card.domain.CardLimitRepository;
 import com.revolutclone.card.domain.CardRepository;
 import com.revolutclone.card.domain.CardState;
 import com.revolutclone.card.domain.CardType;
+import com.revolutclone.card.domain.DeclineReason;
+import com.revolutclone.card.domain.LimitPeriod;
 import com.revolutclone.card.pan.PanGenerator;
 import com.revolutclone.card.readmodel.FundingAccount;
 import com.revolutclone.card.readmodel.FundingAccountRepository;
@@ -31,8 +37,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * The fixture the three authorization tests share: a real Postgres, a fake ledger that genuinely holds
- * funds, and the two projections the chain reads.
+ * The fixture the authorization tests share: a real Postgres, a fake ledger that genuinely holds funds,
+ * and the two projections the chain reads.
  *
  * <p>Each test drives {@link AuthorizationRequestedEventHandler} directly rather than through a broker -
  * that split is exactly what {@code common-messaging}'s thin-listener design exists for, and
@@ -64,7 +70,7 @@ public abstract class AuthorizationTestSupport {
     protected static final long WALLET_BALANCE_MINOR = 10_000L;
 
     /**
-     * One container for all three test classes, started here and deliberately never stopped - the
+     * One container for every test class below, started here and deliberately never stopped - the
      * singleton-container pattern, and not {@code @Testcontainers} + {@code @Container}.
      *
      * <p>That annotation pair manages a static container per <em>test class</em>: declared on a shared
@@ -101,6 +107,9 @@ public abstract class AuthorizationTestSupport {
     protected CardAuthorizationRepository authorizations;
 
     @Autowired
+    protected CardLimitRepository limits;
+
+    @Autowired
     protected FundingAccountRepository fundingAccounts;
 
     @Autowired
@@ -130,6 +139,8 @@ public abstract class AuthorizationTestSupport {
     @BeforeEach
     void seedAnActiveCardOnAFundedEurWallet() {
         authorizations.deleteAll();
+        // Before the cards: card_limit references card(id).
+        limits.deleteAll();
         cards.deleteAll();
         fundingAccounts.deleteAll();
         ledgerAccountRefs.deleteAll();
@@ -176,10 +187,55 @@ public abstract class AuthorizationTestSupport {
         return cards.saveAndFlush(saved);
     }
 
+    /** A ceiling on the seeded card, in the wallet's currency - which is where a limit is denominated. */
+    protected void setLimit(LimitPeriod period, long amountMinor) {
+        setLimit(card.getId(), period, amountMinor);
+    }
+
+    protected void setLimit(UUID cardId, LimitPeriod period, long amountMinor) {
+        limits.saveAndFlush(new CardLimit(cardId, period, amountMinor, EUR));
+    }
+
+    /**
+     * Spend already on the card's history, at an instant of the test's choosing.
+     *
+     * <p>Written straight to the table rather than by moving a clock and tapping, which is how
+     * {@code fx-service}'s {@code ExecuteQuoteTest} backdates an expiry too: the rolling window is a
+     * function of {@code authorized_at}, so a test that controls that column controls the window exactly,
+     * and needs neither a mutable {@code Clock} bean nor a wait. The fake ledger is deliberately not told
+     * about these holds - limits and funds are separate constraints, and a limit test that ran out of
+     * money would be proving the wrong thing.
+     */
+    protected CardAuthorization recordPastSpend(String networkRef, long amountMinor, Instant authorizedAt) {
+        return authorizations.saveAndFlush(CardAuthorization.approved(UUID.randomUUID(), card.getId(),
+                networkRef, MERCHANT, MCC, COUNTRY, amountMinor, EUR, amountMinor, EUR, UUID.randomUUID(),
+                authorizedAt));
+    }
+
+    /** A refusal already on the card's history: recorded, but it moved nothing. */
+    protected CardAuthorization recordPastDecline(String networkRef, long amountMinor, DeclineReason reason,
+            Instant authorizedAt) {
+        return authorizations.saveAndFlush(CardAuthorization.declined(UUID.randomUUID(), card.getId(),
+                networkRef, MERCHANT, MCC, COUNTRY, amountMinor, EUR, amountMinor, EUR, reason, authorizedAt));
+    }
+
     /** One tap, delivered to the consumer exactly as the simulator's message would arrive. */
     protected void tap(String networkRef, String pan, long amountMinor) {
         consumer.handle(envelope(new AuthorizationRequestedV1(
                 networkRef, pan, amountMinor, EUR, MERCHANT, MCC, COUNTRY)));
+    }
+
+    /**
+     * What the issuer decided about one tap. Reads the row rather than the returned decision, because the
+     * row is what the holder's feed and every later settlement message are matched against - a decision
+     * that was returned but not recorded would be no decision at all.
+     */
+    protected AuthorizationState stateOf(String networkRef) {
+        return authorizations.findByNetworkRef(networkRef).orElseThrow().getState();
+    }
+
+    protected DeclineReason declineReasonOf(String networkRef) {
+        return authorizations.findByNetworkRef(networkRef).orElseThrow().getDeclineReason();
     }
 
     protected static EventEnvelope<AuthorizationRequestedV1> envelope(AuthorizationRequestedV1 payload) {

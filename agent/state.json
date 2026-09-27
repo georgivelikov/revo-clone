@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.3",
+  "current": "05.4",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 148.47543530000004,
+    "totalSpentUsd": 164.91611330000003,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1145,11 +1145,11 @@
         "DuplicateNetworkRefTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/05.3-authorization-consumer-with-the-full",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "253b776",
+      "costUsd": 11.639074999999998,
       "notes": null
     },
     {
@@ -1166,11 +1166,11 @@
         "ConcurrentAuthLimitTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
-      "attempts": 0,
+      "status": "in_progress",
+      "attempts": 1,
       "branch": "task/05.4-limit-evaluation-using-a-rolling",
       "commit": null,
-      "costUsd": 0,
+      "costUsd": 4.801603000000001,
       "notes": null
     },
     {

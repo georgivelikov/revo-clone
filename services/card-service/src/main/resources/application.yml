@@ -40,6 +40,14 @@ revolut:
       # owned by the ledger, not by this service - if card-service never comes back, the funds are
       # released anyway.
       hold-ttl: ${CARD_AUTH_HOLD_TTL:7d}
+    limits:
+      # plans/phase-05-cards.md's Risks section: "'Daily' means a rolling 24 h or a calendar day in
+      # the user's timezone - pick one, write it down, and test the boundary." Rolling, measured back
+      # from the decision instant - see CardLimitProperties for the full reasoning and for why the
+      # monthly window is a fixed 30 days rather than a calendar month. The observable consequence:
+      # spend leaves a window gradually, not all at once at midnight.
+      daily-window: ${CARD_LIMIT_DAILY_WINDOW:24h}
+      monthly-window: ${CARD_LIMIT_MONTHLY_WINDOW:30d}
     ledger:
       base-url: ${LEDGER_BASE_URL}
 
