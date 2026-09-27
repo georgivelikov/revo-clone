@@ -94,6 +94,17 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Without a fixed hostname, Keycloak's dev-mode default derives `iss` from whatever
+      # Host header the caller used - so a token minted by hitting the host-exposed
+      # localhost:8180 carries iss=http://localhost:8180/realms/revolut, while every service's
+      # own OIDC_ISSUER_URI is the container-network http://keycloak:8080/realms/revolut. Spring's
+      # resource-server validates `iss` against that exact configured string, so the token is
+      # rejected outright - not a signature problem, an issuer-string mismatch. Pinning the
+      # hostname makes `iss` this one value regardless of which URL/port actually reached it,
+      # which is what lets a host-machine caller (a browser, `tasks.ps1 seed`) and every
+      # container-side validator agree on the same issuer at once.
+      KC_HOSTNAME: http://keycloak:8080
+      KC_HOSTNAME_STRICT: "false"
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./infra/keycloak:/opt/keycloak/data/import:ro
