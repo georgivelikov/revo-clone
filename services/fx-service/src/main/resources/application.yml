@@ -32,6 +32,10 @@ revolut:
       # 50 bps is the phase's default; raise it to make the FEE_INCOME line move in a demo.
       spread-bps: ${FX_SPREAD_BPS:50}
       ttl: ${FX_QUOTE_TTL:30s}
+      # How often QuoteExpirySweep looks for ACTIVE quotes past expires_at. Short relative to
+      # ledger-service's own 60s reservation sweep (revolut.ledger.reservation.sweep-delay-ms) -
+      # that one is the backstop, this one is what makes "let it expire" feel instant in the UI.
+      sweep-delay-ms: ${FX_QUOTE_SWEEP_DELAY_MS:5000}
     ledger:
       base-url: ${LEDGER_BASE_URL}
 

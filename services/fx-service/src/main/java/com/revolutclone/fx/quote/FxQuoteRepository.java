@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -117,6 +118,38 @@ public class FxQuoteRepository {
     public int markCancelled(UUID id) {
         return jdbcClient.sql("update fx_quote set state = 'CANCELLED' where id = :id and state = 'CONSUMED'")
                 .param("id", id)
+                .update();
+    }
+
+    /**
+     * The sweep's candidate set: still {@code ACTIVE}, and due. Selected before the per-row
+     * conditional update rather than updated in bulk because releasing a hold is a synchronous
+     * call to another service, done one reservation at a time outside any transaction - see
+     * {@link QuoteExpirySweep}.
+     */
+    public List<FxQuote> findActiveExpiredAsOf(Instant asOf) {
+        return jdbcClient.sql("select " + COLUMNS + " from fx_quote where state = 'ACTIVE' and expires_at <= :now")
+                .param("now", atUtc(asOf))
+                .query(FxQuoteRepository::mapRow)
+                .list();
+    }
+
+    /**
+     * {@code ACTIVE -> EXPIRED}, conditional on both facts still holding at the database - mirrors
+     * {@link #markConsumed}'s own contract and for the identical reason: a quote executed in the
+     * gap between {@link #findActiveExpiredAsOf} reading the row and this statement reaching it
+     * must be left alone, and the caller finds out by getting {@code 0} back rather than by racing
+     * a plain read-then-write.
+     *
+     * @return 1 if this call performed the transition, 0 if it did not
+     */
+    public int markExpired(UUID id, Instant asOf) {
+        return jdbcClient.sql("""
+                        update fx_quote set state = 'EXPIRED'
+                        where id = :id and state = 'ACTIVE' and expires_at <= :now
+                        """)
+                .param("id", id)
+                .param("now", atUtc(asOf))
                 .update();
     }
 

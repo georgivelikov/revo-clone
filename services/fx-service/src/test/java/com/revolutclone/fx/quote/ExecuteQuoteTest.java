@@ -67,7 +67,12 @@ import tools.jackson.databind.json.JsonMapper;
         "revolut.messaging.outbox.poll-delay-ms=300000",
         "revolut.fx.ledger.base-url=http://ledger.invalid",
         "revolut.fx.quote.spread-bps=50",
-        "revolut.fx.quote.ttl=30s"
+        "revolut.fx.quote.ttl=30s",
+        // anExpiredQuoteIsRefusedOnTheServerClockAndPublishesNothing backdates expires_at and then
+        // asserts the row is still ACTIVE - QuoteExpirySweep's own background tick must not race
+        // that assertion, exactly why ledger-service's own sweep-delay-ms is stretched out in its
+        // FX tests.
+        "revolut.fx.quote.sweep-delay-ms=300000"
 })
 class ExecuteQuoteTest {
 
