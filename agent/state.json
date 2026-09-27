@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "04.2",
+  "current": "04.3",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 103.80308390000002,
+    "totalSpentUsd": 109.57542770000002,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -908,11 +908,11 @@
         "InversePairConsistencyTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/04.2-fx-service-scaffold-flyway-rate",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "8c9e678",
+      "costUsd": 5.772343799999998,
       "notes": null
     },
     {
@@ -929,7 +929,7 @@
         "JpyZeroDigitTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/04.3-fxmath-extension-returning",
       "commit": null,
