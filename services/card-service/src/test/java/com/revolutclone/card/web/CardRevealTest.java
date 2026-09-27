@@ -44,7 +44,11 @@ import tools.jackson.databind.json.JsonMapper;
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://example.invalid/realms/test",
         "spring.kafka.bootstrap-servers=127.0.0.1:9092",
         "spring.kafka.listener.auto-startup=false",
-        "revolut.messaging.outbox.poll-delay-ms=300000"
+        "revolut.messaging.outbox.poll-delay-ms=300000",
+        // Both clients have to bind even though neither is called here - application.yml takes each
+        // base URL from an environment variable with no default.
+        "revolut.card.ledger.base-url=http://ledger.invalid",
+        "revolut.card.fx.base-url=http://fx.invalid"
 })
 class CardRevealTest {
 

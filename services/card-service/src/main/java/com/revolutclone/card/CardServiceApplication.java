@@ -5,6 +5,7 @@ import com.revolutclone.card.authz.CardLimitProperties;
 import com.revolutclone.card.crypto.CardCryptoProperties;
 import com.revolutclone.card.domain.Card;
 import com.revolutclone.card.domain.CardRepository;
+import com.revolutclone.card.fx.CardFxProperties;
 import com.revolutclone.card.ledger.LedgerClientProperties;
 import com.revolutclone.card.readmodel.FundingAccount;
 import com.revolutclone.card.readmodel.FundingAccountRepository;
@@ -28,6 +29,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         CardCryptoProperties.class,
         CardAuthorizationProperties.class,
         CardLimitProperties.class,
+        CardFxProperties.class,
         LedgerClientProperties.class})
 public class CardServiceApplication {
 

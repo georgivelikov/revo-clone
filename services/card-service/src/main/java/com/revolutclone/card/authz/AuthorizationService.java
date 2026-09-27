@@ -5,8 +5,12 @@ import com.revolutclone.card.domain.Card;
 import com.revolutclone.card.domain.CardAuthorization;
 import com.revolutclone.card.domain.CardAuthorizationRepository;
 import com.revolutclone.card.domain.CardRepository;
+import com.revolutclone.card.domain.CardFxDetail;
 import com.revolutclone.card.domain.CardState;
 import com.revolutclone.card.domain.DeclineReason;
+import com.revolutclone.card.fx.CardFxPricer;
+import com.revolutclone.card.fx.CardFxPricing;
+import com.revolutclone.card.fx.CardFxRateUnavailableException;
 import com.revolutclone.card.ledger.HeldFunds;
 import com.revolutclone.card.ledger.HoldFundsCommand;
 import com.revolutclone.card.ledger.LedgerInsufficientFundsException;
@@ -36,7 +40,7 @@ import org.springframework.stereotype.Service;
  * 1. resolve card by PAN hash          -> not found    -> DECLINED(CARD_NOT_FOUND)
  * 2. state == ACTIVE?                  -> frozen       -> DECLINED(CARD_FROZEN)
  * 3. expiry in the future?             -> expired      -> DECLINED(CARD_EXPIRED)
- * 4. FX if merchant currency != wallet -> fx-service rate, mark up          (task 05.5)
+ * 4. FX if merchant currency != wallet -> fx-service rate, mark up
  * 5. limits: per-transaction, rolling daily, rolling monthly
  *                                      -> exceeded     -> DECLINED(LIMIT_EXCEEDED)
  * 6. ledger: HOLD billing amount, 7-day expiry
@@ -44,12 +48,20 @@ import org.springframework.stereotype.Service;
  * 7. -> AuthorizationApprovedV1   (or AuthorizationDeclinedV1 with the reason)
  * </pre>
  *
- * <p>Step 4 is the one the task list still assigns elsewhere - 05.5 converts a foreign-currency amount -
- * and it is marked in place below rather than appended later, because its <em>position</em> is part of
- * the chain: an unconverted amount held on the wrong-currency wallet would be wrong money, not merely a
- * missing feature. Step 5 is the same argument in the other direction. A limit evaluated after the hold
- * would let a refused purchase move a balance, so it sits between the amount being known and the money
- * being touched.
+ * <p><strong>The order is the design.</strong> Step 4's <em>position</em> is load-bearing: an
+ * unconverted amount held on a wrong-currency wallet would be wrong money, not merely a missing
+ * feature, so the conversion happens before anything reads the amount. Step 5 is the same argument in
+ * the other direction - a limit evaluated after the hold would let a refused purchase move a balance,
+ * so it sits between the amount being known and the money being touched. Everything downstream of step
+ * 4 therefore speaks in {@link CardFxPricing#billing()}: the limit windows, the hold, and the row. The
+ * merchant's own amount is recorded and shown to the holder and is never held, never compared against a
+ * limit, and never posted.
+ *
+ * <p><strong>There are two remote calls, not one</strong> - fx-service for the rate and ledger-service
+ * for the hold - and both are on the network's two-to-five-second clock. Neither can be avoided: the
+ * rate is not ours to invent and the available balance is not ours to mirror. What keeps them cheap is
+ * that fx-service answers a rate out of memory and neither call is made until the card has already been
+ * accepted, so a frozen or expired card is still refused without either.
  *
  * <p><strong>Steps 5 to 7 run under {@link PerCardDecisionLock}.</strong> The limit window is computed
  * from committed rows, so the check and the row it produces have to be indivisible per card or two
@@ -59,8 +71,8 @@ import org.springframework.stereotype.Service;
  * <p><strong>Nothing here is a hold on a decision the network is still waiting for.</strong> The
  * phase's timing note - "steps 1-6 must complete in well under a second - a real network times out
  * around 2-5 s [...] this is why the decision cannot wait on a downstream service that might be
- * slow" - is why the card, the wallet and the limit window are all local reads, and why the single
- * remote call is the one whose answer the decision genuinely is.
+ * slow" - is why the card, the wallet and the limit window are all local reads, and why the only
+ * remote calls are the two whose answers the decision genuinely is.
  *
  * <p><strong>{@code networkRef} is the idempotency anchor, not {@code eventId}.</strong> A network
  * resend arrives as a new message with a new {@code eventId}, so {@code common-messaging}'s
@@ -75,8 +87,8 @@ import org.springframework.stereotype.Service;
  *
  * <p><strong>Not every failure is a decline.</strong> A decline is final and visible to the holder, so
  * it is reserved for the five reasons the flow names. A wallet this service has not projected yet
- * ({@link FundingWalletUnknownException}), a currency it cannot convert yet
- * ({@link ForeignCurrencyAuthorizationUnsupportedException}) and a ledger it cannot reach
+ * ({@link FundingWalletUnknownException}), a rate it cannot get
+ * ({@link CardFxRateUnavailableException}) and a ledger it cannot reach
  * ({@code LedgerUnavailableException}) all throw instead, so the message is retried rather than a good
  * card being refused. The hold is keyed on {@code networkRef}, which is what makes that retry safe.
  */
@@ -96,6 +108,7 @@ public class AuthorizationService {
     private final CardAuthorizationRepository authorizations;
     private final PanHasher panHasher;
     private final FundingWalletResolver wallets;
+    private final CardFxPricer fx;
     private final LedgerReservations ledger;
     private final AuthorizationRecorder recorder;
     private final CardLimitEvaluator limits;
@@ -104,13 +117,14 @@ public class AuthorizationService {
     private final Clock clock;
 
     public AuthorizationService(CardRepository cards, CardAuthorizationRepository authorizations,
-            PanHasher panHasher, FundingWalletResolver wallets, LedgerReservations ledger,
+            PanHasher panHasher, FundingWalletResolver wallets, CardFxPricer fx, LedgerReservations ledger,
             AuthorizationRecorder recorder, CardLimitEvaluator limits, PerCardDecisionLock perCardLock,
             CardAuthorizationProperties properties, Clock clock) {
         this.cards = cards;
         this.authorizations = authorizations;
         this.panHasher = panHasher;
         this.wallets = wallets;
+        this.fx = fx;
         this.ledger = ledger;
         this.recorder = recorder;
         this.limits = limits;
@@ -144,49 +158,50 @@ public class AuthorizationService {
         }
         Card card = resolved.get();
 
-        // 2. the card has to be usable. A frozen card declining instantly is the phase's own demo.
+        // 2. the card has to be usable. A frozen card declining instantly is the phase's own demo -
+        //    and it is instant partly because it is refused before either remote call is made.
         if (card.getState() != CardState.ACTIVE) {
-            return decline(card, request, currency, null, null, reasonFor(card.getState()), decidedAt);
+            return decline(card, request, currency, null, reasonFor(card.getState()), decidedAt);
         }
 
         // 3. and unexpired - valid through the last instant of its expiry month, as an embossed card is.
         if (hasExpired(card, decidedAt)) {
-            return decline(card, request, currency, null, null, DeclineReason.CARD_EXPIRED, decidedAt);
+            return decline(card, request, currency, null, DeclineReason.CARD_EXPIRED, decidedAt);
         }
 
         FundingWallet wallet = wallets.resolve(card.getAccountId())
                 .orElseThrow(() -> new FundingWalletUnknownException(card.getId(), card.getAccountId()));
 
-        // 4. FX, when the merchant charges in something other than the wallet's currency (task 05.5:
-        //    fx-service's rate plus the card mark-up, applied separately from the exchange spread).
-        if (!wallet.currency().equals(currency)) {
-            throw new ForeignCurrencyAuthorizationUnsupportedException(currency, wallet.currency());
-        }
-        // Money from here on, not a bare long: the billing amount is about to be compared against limits
-        // in a currency of their own, and Money is what makes a mismatch impossible to do quietly.
-        Money billing = Money.of(request.amountMinor(), wallet.currency());
+        // 4. FX, when the merchant charges in something other than the wallet's currency: fx-service's
+        //    rate, then card-service's mark-up on the converted amount. Money and not a bare long,
+        //    because the billing amount is about to be compared against limits denominated in a
+        //    currency of their own, and Money is what makes a mismatch impossible to do quietly.
+        //    A domestic merchant takes the same path and gets a pricing with no conversion in it.
+        CardFxPricing pricing = fx.price(Money.of(request.amountMinor(), currency), wallet.currency());
 
         // Steps 5 to 7 are one indivisible decision per card: the limit window is read from committed
         // rows, so an interleaved second tap that checks before this one records would see a total that
         // is already out of date. See PerCardDecisionLock.
         return perCardLock.decide(card.getId(),
-                () -> decideWithinLimits(card, request, currency, billing, wallet, decidedAt));
+                () -> decideWithinLimits(card, request, currency, pricing, wallet, decidedAt));
     }
 
     private AuthorizationDecision decideWithinLimits(Card card, AuthorizationRequestedV1 request,
-            String currency, Money billing, FundingWallet wallet, Instant decidedAt) {
+            String currency, CardFxPricing pricing, FundingWallet wallet, Instant decidedAt) {
 
+        Money billing = pricing.billing();
         long billingMinor = billing.minor();
         String billingCurrency = billing.currency().getCurrencyCode();
 
         // 5. limits: per-transaction, then the rolling daily and monthly windows over card_authorization.
-        //    Before the hold, because a purchase that is refused must not move a balance.
+        //    Before the hold, because a purchase that is refused must not move a balance. Measured
+        //    against the billing amount - the converted one, mark-up included - because a limit is a
+        //    ceiling on what leaves the holder's wallet, not on what a merchant happened to name it in.
         Optional<LimitBreach> breach = limits.evaluate(card.getId(), billing, decidedAt);
         if (breach.isPresent()) {
             log.info("declining authorization {} on card {}: {}", request.networkRef(), card.getId(),
                     breach.get().describe());
-            return decline(card, request, currency, billingMinor, billingCurrency,
-                    DeclineReason.LIMIT_EXCEEDED, decidedAt);
+            return decline(card, request, currency, pricing, DeclineReason.LIMIT_EXCEEDED, decidedAt);
         }
 
         // 6. hold the billing amount. The one remote call in the chain, and the one whose answer the
@@ -204,15 +219,15 @@ public class AuthorizationService {
         } catch (LedgerInsufficientFundsException ex) {
             log.info("declining authorization {} on card {}: {}", request.networkRef(), card.getId(),
                     ex.getMessage());
-            return decline(card, request, currency, billingMinor, billingCurrency,
-                    DeclineReason.INSUFFICIENT_FUNDS, decidedAt);
+            return decline(card, request, currency, pricing, DeclineReason.INSUFFICIENT_FUNDS, decidedAt);
         }
 
         // 7. approve. Note what is NOT here: no posting, no journal entry, no ledger_entry_id. The money
         //    is held and no accounting has happened - which is the whole reason this phase exists.
         CardAuthorization approved = CardAuthorization.approved(authorizationId, card.getId(),
                 request.networkRef(), request.merchantName(), request.merchantMcc(), request.merchantCountry(),
-                request.amountMinor(), currency, billingMinor, billingCurrency, held.id(), decidedAt);
+                request.amountMinor(), currency, billingMinor, billingCurrency, pricing.fxDetail(),
+                held.id(), decidedAt);
         recorder.record(approved, new AuthorizationApprovedV1(
                 authorizationId,
                 card.getId(),
@@ -232,13 +247,24 @@ public class AuthorizationService {
         return AuthorizationDecision.approved(authorizationId, held.id());
     }
 
+    /**
+     * Records and publishes a refusal.
+     *
+     * <p>{@code pricing} is null for a decline reached before step 4 and present for one reached after
+     * it, which is what puts the amount the holder <em>would</em> have been charged on the row - the
+     * only number that answers "why was my card refused?" for a foreign purchase.
+     */
     private AuthorizationDecision decline(Card card, AuthorizationRequestedV1 request, String currency,
-            Long billingMinor, String billingCurrency, DeclineReason reason, Instant decidedAt) {
+            CardFxPricing pricing, DeclineReason reason, Instant decidedAt) {
+
+        Long billingMinor = pricing == null ? null : pricing.billing().minor();
+        String billingCurrency = pricing == null ? null : pricing.billing().currency().getCurrencyCode();
+        CardFxDetail fxDetail = pricing == null ? null : pricing.fxDetail();
 
         UUID authorizationId = UUID.randomUUID();
         CardAuthorization declined = CardAuthorization.declined(authorizationId, card.getId(),
                 request.networkRef(), request.merchantName(), request.merchantMcc(), request.merchantCountry(),
-                request.amountMinor(), currency, billingMinor, billingCurrency, reason, decidedAt);
+                request.amountMinor(), currency, billingMinor, billingCurrency, fxDetail, reason, decidedAt);
 
         recorder.record(declined, new AuthorizationDeclinedV1(
                 authorizationId,

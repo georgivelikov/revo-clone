@@ -48,6 +48,13 @@ revolut:
       # spend leaves a window gradually, not all at once at midnight.
       daily-window: ${CARD_LIMIT_DAILY_WINDOW:24h}
       monthly-window: ${CARD_LIMIT_MONTHLY_WINDOW:30d}
+    fx:
+      base-url: ${FX_BASE_URL}
+      # plans/phase-05-cards.md task 5: "the card mark-up applied separately from the exchange
+      # spread". The exchange spread is fx-service's (revolut.fx.quote.spread-bps) and is applied to
+      # the rate; this is card-service's own charge and is applied to the converted amount. Two
+      # numbers in two services, so neither can quietly absorb the other - see CardFxProperties.
+      mark-up-bps: ${CARD_FX_MARK_UP_BPS:100}
     ledger:
       base-url: ${LEDGER_BASE_URL}
 

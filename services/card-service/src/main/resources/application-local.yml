@@ -22,8 +22,14 @@ revolut:
       # plans/phase-05-cards.md's PAN handling note says not to teach.
       encryption-key: AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=
       pan-hash-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-  ledger:
-    base-url: http://127.0.0.1:8083
+    # Nested under revolut.card, not revolut, to match the prefixes CardFxProperties and
+    # LedgerClientProperties actually bind (revolut.card.fx / revolut.card.ledger). The ledger key
+    # previously sat at revolut.ledger.base-url, one level too high, where it bound to nothing and
+    # local dev depended on LEDGER_BASE_URL being exported by hand.
+    fx:
+      base-url: http://127.0.0.1:8085
+    ledger:
+      base-url: http://127.0.0.1:8083
 
 logging:
   structured:

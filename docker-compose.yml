@@ -278,6 +278,10 @@ services:
       # the one hop the decision cannot make through the outbox, because the network is waiting for the
       # answer. See LedgerReservations.
       LEDGER_BASE_URL: ${LEDGER_BASE_URL:-http://ledger-service:8083}
+      # A foreign-currency merchant needs a rate before the amount to hold is even known, so this is
+      # the second synchronous hop in the same decision. fx-service answers it out of its in-memory
+      # rate cache. See CardFxRates.
+      FX_BASE_URL: ${FX_BASE_URL:-http://fx-service:8085}
     depends_on:
       postgres:
         condition: service_healthy

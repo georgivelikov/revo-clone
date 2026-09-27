@@ -47,7 +47,7 @@ import tools.jackson.databind.json.JsonMapper;
  * row, and the outbox row that announces it.
  */
 @SpringBootTest
-@Import({NoOpJwtDecoderTestConfig.class, FakeLedgerTestConfig.class})
+@Import({NoOpJwtDecoderTestConfig.class, FakeLedgerTestConfig.class, FakeCardFxTestConfig.class})
 @TestPropertySource(properties = {
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://example.invalid/realms/test",
         "spring.kafka.bootstrap-servers=127.0.0.1:9092",
@@ -55,9 +55,10 @@ import tools.jackson.databind.json.JsonMapper;
         // connection nothing is listening on.
         "spring.kafka.listener.auto-startup=false",
         "revolut.messaging.outbox.poll-delay-ms=300000",
-        // Never called - the ledger port is substituted by FakeLedgerTestConfig - but it still has to
-        // bind, because application.yml takes it from an environment variable with no default.
-        "revolut.card.ledger.base-url=http://ledger.invalid"
+        // Never called - both ports are substituted above - but they still have to bind, because
+        // application.yml takes each from an environment variable with no default.
+        "revolut.card.ledger.base-url=http://ledger.invalid",
+        "revolut.card.fx.base-url=http://fx.invalid"
 })
 public abstract class AuthorizationTestSupport {
 
@@ -65,9 +66,20 @@ public abstract class AuthorizationTestSupport {
     protected static final String MCC = "5411";
     protected static final String COUNTRY = "IE";
     protected static final String EUR = "EUR";
+    protected static final String USD = "USD";
 
     /** 100.00 EUR, and the only money this card's wallet has. */
     protected static final long WALLET_BALANCE_MINOR = 10_000L;
+
+    /**
+     * 1.25 USD per EUR - the mid every test starts with, seeded into {@link FakeCardFxRates} in the
+     * direction fx-service is asked in (the wallet sells, the merchant's currency is bought).
+     *
+     * <p>Round on purpose: with fx-service's default 50 bps spread the exchange rate is exactly
+     * 1.24375, whose inverse is 0.8040201005 to the ten decimal places a rate is stored at, so every
+     * figure in {@code ForeignCurrencyAuthTest} can be checked by hand.
+     */
+    protected static final String EUR_USD_MID = "1.2500000000";
 
     /**
      * One container for every test class below, started here and deliberately never stopped - the
@@ -122,6 +134,9 @@ public abstract class AuthorizationTestSupport {
     protected FakeLedgerReservations ledger;
 
     @Autowired
+    protected FakeCardFxRates fxRates;
+
+    @Autowired
     protected PanHasher panHasher;
 
     @Autowired
@@ -146,6 +161,8 @@ public abstract class AuthorizationTestSupport {
         ledgerAccountRefs.deleteAll();
         outbox.deleteAll();
         ledger.reset();
+        fxRates.reset();
+        fxRates.setMid(EUR, USD, EUR_USD_MID);
 
         userId = UUID.randomUUID();
         accountId = UUID.randomUUID();
@@ -207,22 +224,33 @@ public abstract class AuthorizationTestSupport {
      * money would be proving the wrong thing.
      */
     protected CardAuthorization recordPastSpend(String networkRef, long amountMinor, Instant authorizedAt) {
+        // A domestic merchant: no conversion happened, so no FX detail - see CardFxDetail on why null
+        // there means something different from zero.
         return authorizations.saveAndFlush(CardAuthorization.approved(UUID.randomUUID(), card.getId(),
-                networkRef, MERCHANT, MCC, COUNTRY, amountMinor, EUR, amountMinor, EUR, UUID.randomUUID(),
-                authorizedAt));
+                networkRef, MERCHANT, MCC, COUNTRY, amountMinor, EUR, amountMinor, EUR, null,
+                UUID.randomUUID(), authorizedAt));
     }
 
     /** A refusal already on the card's history: recorded, but it moved nothing. */
     protected CardAuthorization recordPastDecline(String networkRef, long amountMinor, DeclineReason reason,
             Instant authorizedAt) {
         return authorizations.saveAndFlush(CardAuthorization.declined(UUID.randomUUID(), card.getId(),
-                networkRef, MERCHANT, MCC, COUNTRY, amountMinor, EUR, amountMinor, EUR, reason, authorizedAt));
+                networkRef, MERCHANT, MCC, COUNTRY, amountMinor, EUR, amountMinor, EUR, null, reason,
+                authorizedAt));
     }
 
     /** One tap, delivered to the consumer exactly as the simulator's message would arrive. */
     protected void tap(String networkRef, String pan, long amountMinor) {
+        tap(networkRef, pan, amountMinor, EUR);
+    }
+
+    /**
+     * One tap in a currency of the test's choosing. Anything other than the wallet's {@code EUR} takes
+     * step 4's FX path, which is what {@code ForeignCurrencyAuthTest} is about.
+     */
+    protected void tap(String networkRef, String pan, long amountMinor, String currency) {
         consumer.handle(envelope(new AuthorizationRequestedV1(
-                networkRef, pan, amountMinor, EUR, MERCHANT, MCC, COUNTRY)));
+                networkRef, pan, amountMinor, currency, MERCHANT, MCC, COUNTRY)));
     }
 
     /**

@@ -38,7 +38,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         // No real broker in this test - the consumer would otherwise spend the whole test
         // retrying a connection nothing is listening on.
         "spring.kafka.listener.auto-startup=false",
-        "revolut.messaging.outbox.poll-delay-ms=300000"
+        "revolut.messaging.outbox.poll-delay-ms=300000",
+        // Both clients have to bind even though neither is called here - application.yml takes each
+        // base URL from an environment variable with no default.
+        "revolut.card.ledger.base-url=http://ledger.invalid",
+        "revolut.card.fx.base-url=http://fx.invalid"
 })
 class CardLookupByPanHashTest {
 

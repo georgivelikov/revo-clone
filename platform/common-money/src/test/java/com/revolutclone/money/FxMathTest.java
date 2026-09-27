@@ -243,6 +243,48 @@ class FxMathTest {
     }
 
     @Nested
+    @DisplayName("a basis-point charge on an amount")
+    class BpsOfAnAmount {
+
+        @Test
+        void oneHundredBasisPointsIsOnePercentOfTheMinorUnits() {
+            // The card mark-up on plans/phase-05-cards.md's worked foreign-currency purchase: 1% of
+            // EUR 40.20 is EUR 0.40 after rounding, and 4020 + 40 is exactly what the wallet is held for.
+            assertThat(FxMath.bpsOf(Money.of(4_020L, "EUR"), 100)).isEqualTo(Money.of(40L, "EUR"));
+        }
+
+        @Test
+        void theChargeIsInTheAmountsOwnCurrency() {
+            assertThat(FxMath.bpsOf(Money.of(1_000_000L, "JPY"), 250).currency().getCurrencyCode())
+                    .isEqualTo("JPY");
+            // Zero fraction digits are not a special case: bps applies to whole minor units either way.
+            assertThat(FxMath.bpsOf(Money.of(1_000_000L, "JPY"), 250)).isEqualTo(Money.of(25_000L, "JPY"));
+        }
+
+        @Test
+        void tiesRoundHalfEvenSoTheyDoNotAccumulateInEitherPartysFavour() {
+            // 50 bps of 4900 is exactly 24.5 -> 24 (even), and of 5100 exactly 25.5 -> 26 (even).
+            assertThat(FxMath.bpsOf(Money.of(4_900L, "EUR"), 50)).isEqualTo(Money.of(24L, "EUR"));
+            assertThat(FxMath.bpsOf(Money.of(5_100L, "EUR"), 50)).isEqualTo(Money.of(26L, "EUR"));
+        }
+
+        @Test
+        void aZeroChargeIsZeroAndNotAnError() {
+            // "No mark-up today" is a legitimate setting, and it must leave the amount alone rather
+            // than refuse to be applied.
+            assertThat(FxMath.bpsOf(Money.of(4_020L, "EUR"), 0)).isEqualTo(Money.zero("EUR"));
+        }
+
+        @Test
+        void rejectsANegativeChargeOrOneOfAWholeUnitOrMore() {
+            assertThatThrownBy(() -> FxMath.bpsOf(Money.of(100L, "EUR"), -1))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> FxMath.bpsOf(Money.of(100L, "EUR"), 10_000))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("applying a spread to a mid rate")
     class ApplyingASpread {
 

@@ -221,6 +221,44 @@ public final class FxMath {
     }
 
     /**
+     * A basis-point charge on an amount, in that amount's own currency, rounded to whole minor
+     * units with {@link RoundingMode#HALF_EVEN}.
+     *
+     * <p>Lives here rather than on {@link Money} because the only charge in this project shaped
+     * like this is the <strong>card mark-up</strong> on a foreign-currency authorization
+     * (plans/phase-05-cards.md step 4: "fx-service rate, mark up"), which exists solely because a
+     * conversion happened. It is deliberately <em>not</em> a second spread folded into the rate:
+     *
+     * <ul>
+     *   <li>The exchange spread is a rate adjustment and belongs to {@code fx-service}, which owns
+     *       the rate and books the spread as its own revenue - see {@link #applySpread}.</li>
+     *   <li>The card mark-up is a percentage of the <em>converted</em> amount and belongs to
+     *       {@code card-service}. Applied this way it is an exact integer addend: converted plus
+     *       mark-up is the amount held, with no sub-unit residual anywhere between them, so the
+     *       settlement entry can credit the mark-up to {@code FEE_INCOME} and the rest to
+     *       {@code card-settlement} and still sum to zero without a plug leg.</li>
+     * </ul>
+     *
+     * <p>That exactness is the whole reason for the shape. Marking the <em>rate</em> up a second
+     * time would make the mark-up the difference between two independently rounded conversions,
+     * and {@code FEE_INCOME} would then answer "the mark-up, plus or minus rounding noise" -
+     * precisely the failure {@code fx-service}'s three-way leg rating exists to avoid on the
+     * exchange side.
+     *
+     * @throws IllegalArgumentException if {@code bps} is negative or at least one whole unit
+     */
+    public static Money bpsOf(Money amount, int bps) {
+        Objects.requireNonNull(amount, "amount");
+        if (bps < 0 || bps >= BPS_PER_UNIT) {
+            throw new IllegalArgumentException("bps must be in [0, " + BPS_PER_UNIT + "), got " + bps);
+        }
+        BigDecimal charge = new BigDecimal(amount.minor())
+                .multiply(BigDecimal.valueOf(bps).movePointLeft(4))
+                .setScale(0, RoundingMode.HALF_EVEN);
+        return new Money(charge.longValueExact(), amount.currency());
+    }
+
+    /**
      * Derives the reverse direction of a canonically-ordered pair, e.g. {@code GBP/EUR} from a
      * stored {@code EUR/GBP} mid. plans/phase-04-fx-multicurrency.md's rate feed design is
      * explicit that this must be *derived*, never stored as a second independent series: "Storing

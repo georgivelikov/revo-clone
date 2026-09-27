@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.4",
+  "current": "05.5",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 164.91611330000003,
+    "totalSpentUsd": 181.69505480000004,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1166,11 +1166,11 @@
         "ConcurrentAuthLimitTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 1,
       "branch": "task/05.4-limit-evaluation-using-a-rolling",
-      "commit": null,
-      "costUsd": 4.801603000000001,
+      "commit": "8a8f596",
+      "costUsd": 9.4771815,
       "notes": null
     },
     {
@@ -1186,11 +1186,11 @@
         "ForeignCurrencyAuthTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
-      "attempts": 0,
+      "status": "in_progress",
+      "attempts": 1,
       "branch": "task/05.5-fx-path-for-foreign-currency-merchants",
       "commit": null,
-      "costUsd": 0,
+      "costUsd": 12.103363,
       "notes": null
     },
     {
