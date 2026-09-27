@@ -30,6 +30,11 @@ public class PanGenerator {
         return toDigitString(digits);
     }
 
+    /** A 3-digit CVV, zero-padded. No checksum - a real CVV carries none either. */
+    public String generateCvv() {
+        return "%03d".formatted(random.nextInt(1000));
+    }
+
     /** True if {@code pan} is all digits and satisfies the Luhn checksum. */
     public static boolean isValidLuhn(String pan) {
         if (pan == null || !pan.chars().allMatch(Character::isDigit)) {

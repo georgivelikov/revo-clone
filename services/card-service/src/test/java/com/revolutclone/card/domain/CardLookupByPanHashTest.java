@@ -106,6 +106,7 @@ class CardLookupByPanHashTest {
                 expiryMonth,
                 expiryYear,
                 panCipher.encrypt("123"),
+                "$2a$10$not-a-real-bcrypt-hash-just-a-fixture-value...........",
                 CardType.VIRTUAL,
                 CardState.ACTIVE,
                 null);

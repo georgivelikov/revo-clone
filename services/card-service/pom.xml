@@ -66,6 +66,13 @@
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
     <dependency>
+      <!-- BCryptPasswordEncoder, for CardPinHasher. Transitively present via common-security's
+           oauth2-resource-server -> spring-security-core chain, but declared explicitly since
+           card-service uses it directly rather than relying on an incidental transitive edge. -->
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-crypto</artifactId>
+    </dependency>
+    <dependency>
       <!-- Boot 4.1 split Flyway's autoconfiguration out of spring-boot-autoconfigure; flyway-core
            alone does not activate it. See docs/spring-boot-4-notes.md. -->
       <groupId>org.springframework.boot</groupId>

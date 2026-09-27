@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.1",
+  "current": "05.2",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 135.72400270000003,
+    "totalSpentUsd": 146.81301550000003,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1105,11 +1105,11 @@
         "CardLookupByPanHashTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/05.1-card-service-scaffold-flyway",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "cb9b562",
+      "costUsd": 4.524162800000003,
       "notes": null
     },
     {
@@ -1123,11 +1123,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
-      "attempts": 0,
+      "status": "in_progress",
+      "attempts": 1,
       "branch": "task/05.2-issuance-endpoint-cardissuedv1-reveal",
       "commit": null,
-      "costUsd": 0,
+      "costUsd": 6.56485,
       "notes": null
     },
     {

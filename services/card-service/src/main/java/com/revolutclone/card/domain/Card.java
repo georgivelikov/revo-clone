@@ -59,6 +59,9 @@ public class Card implements Persistable<UUID> {
     @Column(name = "cvv_encrypted", nullable = false)
     private byte[] cvvEncrypted;
 
+    @Column(name = "pin_hash", nullable = false)
+    private String pinHash;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CardType type;
@@ -86,6 +89,7 @@ public class Card implements Persistable<UUID> {
             int expiryMonth,
             int expiryYear,
             byte[] cvvEncrypted,
+            String pinHash,
             CardType type,
             CardState state,
             String label) {
@@ -98,6 +102,7 @@ public class Card implements Persistable<UUID> {
         this.expiryMonth = expiryMonth;
         this.expiryYear = expiryYear;
         this.cvvEncrypted = cvvEncrypted;
+        this.pinHash = pinHash;
         this.type = type;
         this.state = state;
         this.label = label;
@@ -150,6 +155,10 @@ public class Card implements Persistable<UUID> {
 
     public byte[] getCvvEncrypted() {
         return cvvEncrypted;
+    }
+
+    public String getPinHash() {
+        return pinHash;
     }
 
     public CardType getType() {

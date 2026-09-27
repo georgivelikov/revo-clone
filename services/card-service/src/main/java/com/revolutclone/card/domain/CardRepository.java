@@ -13,4 +13,12 @@ public interface CardRepository extends JpaRepository<Card, UUID> {
      * unique across cards.
      */
     Optional<Card> findByPanHash(byte[] panHash);
+
+    /**
+     * The reveal endpoint's ownership check: a card id that exists but belongs to somebody else
+     * must read as "not found," not "forbidden" - same reasoning as {@code payment-service}'s
+     * {@code SourceAccountNotFoundException}, so this endpoint cannot be used to probe which
+     * card ids are real.
+     */
+    Optional<Card> findByIdAndUserId(UUID id, UUID userId);
 }
