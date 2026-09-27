@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "04.1",
+  "current": "04.2",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 101.71901730000002,
+    "totalSpentUsd": 103.80308390000002,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -890,8 +890,8 @@
       "status": "done",
       "attempts": 1,
       "branch": "task/04.1-simulator-service-scaffold-random-walk",
-      "commit": "f0f9d6e",
-      "costUsd": 7.279438999999996,
+      "commit": "09756c3",
+      "costUsd": 9.363505599999996,
       "notes": "Attempt 1 went RED on a Windows file-lock issue unrelated to the task code (mvn clean couldn't delete platform/common-money's jar because another process still held it open - the same recurring environment issue noted on tasks 03.7/03.12). Attempt 2 was launched but interrupted mid-run when the user hit their Claude usage limit; the harness driver process was stopped before it could record a result, leaving status stuck at in_progress and the branch with partial uncommitted work from both attempts. This session found the branch's uncommitted work already complete and correct against the Design detail (FxPairs' four canonical pairs, FxMath.randomWalkStep as the one BigDecimal seam, FxRateTickService/Publisher/Scheduler wired through EventPublisher directly since this service owns no database, application.yml's configurable volatility/tick-interval, docker-compose entry) - wrote no new source, just verified and committed it. Hit the same Windows jar-lock issue again mid-session (this time self-inflicted: a background `mvn clean verify` I'd started was still running when the Stop hook's own gate invocation tried to clean the same jar), which produced two more spurious RED gates before the original background build finished and released the lock; a clean single-invocation `mvn clean verify` then passed with exit 0. Tripwire clean, 263 tests (up from 259)."
     },
     {
@@ -908,7 +908,7 @@
         "InversePairConsistencyTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/04.2-fx-service-scaffold-flyway-rate",
       "commit": null,
