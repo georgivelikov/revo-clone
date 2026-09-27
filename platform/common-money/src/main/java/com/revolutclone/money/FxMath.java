@@ -11,6 +11,9 @@ import java.util.Objects;
  */
 public final class FxMath {
 
+    private static final int RANDOM_WALK_SCALE = 8;
+    private static final BigDecimal RANDOM_WALK_FLOOR = new BigDecimal("0.00010000");
+
     private FxMath() {
     }
 
@@ -37,5 +40,37 @@ public final class FxMath {
 
         long minor = convertedMajor.unscaledValue().longValueExact();
         return new Money(minor, target);
+    }
+
+    /**
+     * One step of a geometric random walk on a mid-rate: {@code next = current * (1 + noise)},
+     * where {@code noise} is a pre-drawn Gaussian sample scaled by {@code volatility}. Backs
+     * {@code simulator-service}'s FX rate feed (plans/phase-04-fx-multicurrency.md), which needs
+     * a moving mid rather than a static table so quote expiry is meaningful.
+     *
+     * <p>Every argument and the result are decimal strings, not {@link BigDecimal} - CLAUDE.md's
+     * hard rule 1 confines {@code BigDecimal} to this class and {@link Money#toMajor()}, so
+     * every other class in the codebase, including this method's caller, holds a rate as its
+     * exact decimal text and never declares the type itself. The Gaussian sample is generated
+     * by the caller (a {@code java.util.Random} is not FX arithmetic) and passed in as a string
+     * for the same reason.
+     *
+     * <p>Never returns zero or negative - clamped to a small positive floor instead, since a
+     * rate that direction would make every downstream conversion nonsensical.
+     */
+    public static String randomWalkStep(String currentMid, String volatility, String gaussianNoiseSample) {
+        Objects.requireNonNull(currentMid, "currentMid");
+        Objects.requireNonNull(volatility, "volatility");
+        Objects.requireNonNull(gaussianNoiseSample, "gaussianNoiseSample");
+
+        BigDecimal mid = new BigDecimal(currentMid);
+        BigDecimal vol = new BigDecimal(volatility);
+        if (vol.signum() < 0) {
+            throw new IllegalArgumentException("volatility must not be negative: " + volatility);
+        }
+
+        BigDecimal noise = new BigDecimal(gaussianNoiseSample).multiply(vol);
+        BigDecimal next = mid.add(mid.multiply(noise)).setScale(RANDOM_WALK_SCALE, RoundingMode.HALF_EVEN);
+        return (next.compareTo(RANDOM_WALK_FLOOR) < 0 ? RANDOM_WALK_FLOOR : next).toPlainString();
     }
 }

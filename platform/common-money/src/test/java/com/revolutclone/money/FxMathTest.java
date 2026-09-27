@@ -159,4 +159,45 @@ class FxMathTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    @DisplayName("random walk step")
+    class RandomWalkStep {
+
+        @Test
+        void aPositiveNoiseSampleMovesTheMidUp() {
+            String next = FxMath.randomWalkStep("0.86000000", "0.0005", "2.0");
+
+            assertThat(new BigDecimal(next)).isGreaterThan(new BigDecimal("0.86000000"));
+        }
+
+        @Test
+        void aNegativeNoiseSampleMovesTheMidDown() {
+            String next = FxMath.randomWalkStep("0.86000000", "0.0005", "-2.0");
+
+            assertThat(new BigDecimal(next)).isLessThan(new BigDecimal("0.86000000"));
+        }
+
+        @Test
+        void isDeterministicForTheSameInputs() {
+            String first = FxMath.randomWalkStep("1.08000000", "0.0005", "0.37");
+            String second = FxMath.randomWalkStep("1.08000000", "0.0005", "0.37");
+
+            assertThat(first).isEqualTo(second);
+        }
+
+        @Test
+        void clampsToAPositiveFloorRatherThanGoingToZeroOrNegative() {
+            // A wildly negative noise sample would otherwise drive the mid below zero.
+            String next = FxMath.randomWalkStep("0.86000000", "50", "-10.0");
+
+            assertThat(new BigDecimal(next).signum()).isPositive();
+        }
+
+        @Test
+        void rejectsNegativeVolatility() {
+            assertThatThrownBy(() -> FxMath.randomWalkStep("0.86000000", "-0.1", "1.0"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
 }

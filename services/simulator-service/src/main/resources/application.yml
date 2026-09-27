@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8089}
+
+spring:
+  application:
+    name: simulator-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+revolut:
+  simulator:
+    fx:
+      # Per-tick Gaussian standard deviation, as a fraction of the current mid. 5 bps default -
+      # wide enough that a quote's 30s expiry and a rate move between quote and confirm are both
+      # reachable in testing, narrow enough the feed still looks like a real rate on screen.
+      volatility: ${FX_SIMULATOR_VOLATILITY:0.0005}
+      tick-interval-ms: ${FX_SIMULATOR_TICK_INTERVAL_MS:500}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash

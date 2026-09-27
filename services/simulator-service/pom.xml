@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.revolutclone</groupId>
+    <artifactId>services</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>simulator-service</artifactId>
+
+  <name>Revolut Clone :: Services :: Simulator Service</name>
+  <description>
+    Owns no database - see docs/architecture.md - because it only ever speaks in events: a
+    random-walk FX mid-rate producer for now, with a merchant/card network and a controllable
+    clock added in Phase 05. There is no transactional outbox here (nothing to keep atomic with
+    a database write that never happens), so it reuses common-messaging's own
+    KafkaEventPublisher directly - see SimulatorServiceApplication for why that dependency
+    excludes common-messaging's JPA/Flyway pieces, which this database-less service cannot
+    satisfy.
+  </description>
+
+  <dependencies>
+    <!-- Versions come from spring-boot-dependencies via the root parent; never pin them here. -->
+    <dependency>
+      <groupId>com.revolutclone</groupId>
+      <artifactId>contracts</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.revolutclone</groupId>
+      <artifactId>common-money</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <!-- Only for EventPublisher/KafkaEventPublisher (see SimulatorServiceApplication) - the
+           outbox, idempotent-consumer and JPA-backed pieces of this module are excluded below
+           since this service owns no database. -->
+      <groupId>com.revolutclone</groupId>
+      <artifactId>common-messaging</artifactId>
+      <version>${project.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-flyway</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-database-postgresql</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.postgresql</groupId>
+          <artifactId>postgresql</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <!-- Boot 4.1 split Kafka autoconfiguration out of spring-boot-autoconfigure; spring-kafka
+           alone doesn't activate the KafkaTemplate bean. See docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.kafka</groupId>
+      <artifactId>spring-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Boot 4.1 split @AutoConfigureMockMvc out of spring-boot-starter-test. See
+           docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>

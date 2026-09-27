@@ -1,0 +1,10 @@
+# Local-dev defaults only. Never merged into application.yml - see CLAUDE.md's config-hygiene
+# rule; the tripwire checks this by filename.
+spring:
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+
+logging:
+  structured:
+    format:
+      console:

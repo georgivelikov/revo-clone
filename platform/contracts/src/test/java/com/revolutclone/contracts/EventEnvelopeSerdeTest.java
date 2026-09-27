@@ -3,6 +3,7 @@ package com.revolutclone.contracts;
 import com.revolutclone.contracts.events.AccountOpenedV1;
 import com.revolutclone.contracts.events.EntryPostedV1;
 import com.revolutclone.contracts.events.EntryRejectedV1;
+import com.revolutclone.contracts.events.FxRateTickV1;
 import com.revolutclone.contracts.events.LedgerAccountCreatedV1;
 import com.revolutclone.contracts.events.LedgerDriftDetectedV1;
 import com.revolutclone.contracts.events.PaymentCompletedV1;
@@ -75,6 +76,7 @@ class EventEnvelopeSerdeTest {
                 new LedgerDriftDetectedV1(a, 1000L, 990L, "EUR"),
                 new PaymentInitiatedV1(a, a, b, 2500L, "EUR"),
                 new PaymentCompletedV1(a),
-                new PaymentFailedV1(a, "INSUFFICIENT_FUNDS"));
+                new PaymentFailedV1(a, "INSUFFICIENT_FUNDS"),
+                new FxRateTickV1("EUR/GBP", "0.86000000", Instant.now(), "simulator-service"));
     }
 }
