@@ -4,7 +4,7 @@
   "current": "05.5",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 181.69505480000004,
+    "totalSpentUsd": 193.75003930000003,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1186,12 +1186,12 @@
         "ForeignCurrencyAuthTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
-      "attempts": 1,
+      "status": "done",
+      "attempts": 2,
       "branch": "task/05.5-fx-path-for-foreign-currency-merchants",
-      "commit": null,
-      "costUsd": 12.103363,
-      "notes": null
+      "commit": "7d6781a",
+      "costUsd": 24.158347499999998,
+      "notes": "Same bookkeeping gap as 03.6: attempt 2 wrote and committed the whole task as 7d6781a, but the run ended before state.json was marked done, so the task looked unfinished while its work was already on the branch. This session verified 7d6781a against the phase rather than rewriting it - no production or test source was changed. What is there: fx-service grows GET /internal/fx/rates/{sell}/{buy} returning mid, client rate and spreadBps as three separate facts; card-service adds CardFxPricer/CardFxPricing/CardFxRates and applies its own mark-up (revolut.card.fx.mark-up-bps, default 100) to the converted minor units, never to the rate, so exchanged + markUp == billing exactly and task 05.6's two-credit settlement entry can balance; V6 adds five nullable fx_* columns as evidence with check constraints; holds are at the auth rate and settle at the auth rate (the phase's 'Holds and the FX rate' gotcha, decided and documented); a rate we cannot get throws CardFxRateUnavailableException rather than becoming a sixth decline reason. ForeignCurrencyAuthTest (10 tests) is the phase's named test and its fake rate port derives rates with FxMath.applySpread rather than returning what it is handed, so a spread applied in the wrong direction cannot pass. Environment note, now the fourth task to hit it: `mvn clean verify` failed on a locked platform/common-money jar held by an orphaned java.exe from an earlier session, and this session had no approval surface for tasklist/Get-Process or for any PowerShell mvn invocation, so it was diagnosed from the clean-plugin error alone and worked around with `mvn verify` (no clean)."
     },
     {
       "id": "05.6",
