@@ -22,6 +22,8 @@ revolut:
       # plans/phase-05-cards.md's PAN handling note says not to teach.
       encryption-key: AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=
       pan-hash-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  ledger:
+    base-url: http://127.0.0.1:8083
 
 logging:
   structured:

@@ -66,6 +66,13 @@
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
     <dependency>
+      <!-- RestClient.Builder, for the ledger reservation adapter. Boot 4.1 split the RestClient
+           autoconfiguration into its own module; spring-boot-starter-web carries only the server
+           side. See docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
+    </dependency>
+    <dependency>
       <!-- BCryptPasswordEncoder, for CardPinHasher. Transitively present via common-security's
            oauth2-resource-server -> spring-security-core chain, but declared explicitly since
            card-service uses it directly rather than relying on an incidental transitive edge. -->

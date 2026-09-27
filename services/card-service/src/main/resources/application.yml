@@ -35,6 +35,13 @@ revolut:
       # is reversible, the hash key must not be, so a leak of one must not compromise the other.
       encryption-key: ${CARD_ENCRYPTION_KEY}
       pan-hash-key: ${CARD_PAN_HASH_KEY}
+    authorization:
+      # plans/phase-05-cards.md: "ledger: HOLD billing amount, 7-day expiry". The hold's timeout is
+      # owned by the ledger, not by this service - if card-service never comes back, the funds are
+      # released anyway.
+      hold-ttl: ${CARD_AUTH_HOLD_TTL:7d}
+    ledger:
+      base-url: ${LEDGER_BASE_URL}
 
 management:
   endpoints:

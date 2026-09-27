@@ -1,8 +1,12 @@
 package com.revolutclone.card;
 
+import com.revolutclone.card.authz.CardAuthorizationProperties;
 import com.revolutclone.card.crypto.CardCryptoProperties;
 import com.revolutclone.card.domain.Card;
 import com.revolutclone.card.domain.CardRepository;
+import com.revolutclone.card.ledger.LedgerClientProperties;
+import com.revolutclone.card.readmodel.FundingAccount;
+import com.revolutclone.card.readmodel.FundingAccountRepository;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -17,9 +21,12 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * context - see docs/spring-boot-4-notes.md and every other service here.
  */
 @SpringBootApplication
-@EntityScan(basePackageClasses = Card.class)
-@EnableJpaRepositories(basePackageClasses = CardRepository.class)
-@EnableConfigurationProperties(CardCryptoProperties.class)
+@EntityScan(basePackageClasses = {Card.class, FundingAccount.class})
+@EnableJpaRepositories(basePackageClasses = {CardRepository.class, FundingAccountRepository.class})
+@EnableConfigurationProperties({
+        CardCryptoProperties.class,
+        CardAuthorizationProperties.class,
+        LedgerClientProperties.class})
 public class CardServiceApplication {
 
     public static void main(String[] args) {

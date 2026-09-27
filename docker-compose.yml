@@ -274,6 +274,10 @@ services:
       # application-local.yml and plans/phase-05-cards.md's PAN handling note.
       CARD_ENCRYPTION_KEY: AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=
       CARD_PAN_HASH_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      # An authorization holds funds on the card's wallet, which is a synchronous call to the ledger -
+      # the one hop the decision cannot make through the outbox, because the network is waiting for the
+      # answer. See LedgerReservations.
+      LEDGER_BASE_URL: ${LEDGER_BASE_URL:-http://ledger-service:8083}
     depends_on:
       postgres:
         condition: service_healthy
