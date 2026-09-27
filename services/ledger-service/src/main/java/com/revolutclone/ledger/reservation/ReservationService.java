@@ -27,9 +27,11 @@ import com.revolutclone.ledger.reservation.error.ReservationNotHeldException;
 import com.revolutclone.messaging.api.OutboxAppender;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -162,6 +164,38 @@ public class ReservationService {
     @Transactional
     public CaptureResult capture(UUID reservationId, UUID counterpartyAccountId, long amountMinor,
             JournalEntryType type, String idempotencyKey, UUID referenceId) {
+        return captureWithLegs(reservationId, amountMinor, type, idempotencyKey, referenceId,
+                reservation -> List.of(new PostingLine(counterpartyAccountId, PostingDirection.CREDIT,
+                        amountMinor, reservation.getCurrency(), null)));
+    }
+
+    /**
+     * The same capture, for an entry whose counterparty is not one account in one currency.
+     * {@code counterLegs} supplies every posting <em>except</em> the capturing DEBIT, which this
+     * method builds itself from the reservation - the account and currency the money leaves are
+     * the ledger's own fact, and letting a caller restate them would be a second version of the
+     * truth for a stale or malformed request to contradict.
+     *
+     * <p>Phase 04's FX execution is the first caller: money leaves one currency and appears in
+     * another, so the entry is five legs (six with a rounding residual) across two currencies
+     * rather than a DEBIT and a CREDIT, and only the sell leg captures a hold. The legs are given
+     * as a function of the reservation so a caller that <em>does</em> need the held currency -
+     * {@link #capture} itself - can read it inside this transaction instead of looking the row up
+     * a second time beforehand.
+     *
+     * <p>Balancing is not checked here: {@code PostingTransactionExecutor} validates net-zero per
+     * currency before it writes anything, and the deferred {@code posting_balanced} trigger
+     * re-checks at commit. A caller handing over legs that do not balance gets an
+     * {@link IllegalArgumentException} from there, and nothing is written.
+     *
+     * <p>{@code @Transactional} for callers that reach it directly; {@link #capture}'s own
+     * annotation is what holds when it delegates here, since a call between two methods of the
+     * same bean does not pass through the proxy. Both are {@code REQUIRED}, so the boundary is the
+     * same one either way.
+     */
+    @Transactional
+    public CaptureResult captureWithLegs(UUID reservationId, long amountMinor, JournalEntryType type,
+            String idempotencyKey, UUID referenceId, Function<Reservation, List<PostingLine>> counterLegs) {
         Optional<JournalEntry> existingEntry = journalEntryRepository.findByIdempotencyKey(idempotencyKey);
         if (existingEntry.isPresent()) {
             JournalEntry entry = existingEntry.get();
@@ -186,17 +220,25 @@ public class ReservationService {
             throw new CaptureExceedsHoldException(reservationId, amountMinor, reservation.getAmountMinor());
         }
 
-        PostEntryCommand command = new PostEntryCommand(idempotencyKey, type, referenceId, List.of(
-                new PostingLine(reservation.getLedgerAccountId(), PostingDirection.DEBIT, amountMinor,
-                        reservation.getCurrency(), reservationId),
-                new PostingLine(counterpartyAccountId, PostingDirection.CREDIT, amountMinor,
-                        reservation.getCurrency(), null)));
+        List<PostingLine> postings = new ArrayList<>();
+        postings.add(new PostingLine(reservation.getLedgerAccountId(), PostingDirection.DEBIT, amountMinor,
+                reservation.getCurrency(), reservationId));
+        postings.addAll(counterLegs.apply(reservation));
+
+        PostEntryCommand command = new PostEntryCommand(idempotencyKey, type, referenceId, postings);
         PostEntryResult result = postingTransactionExecutor.postEntry(command);
         if (!(result instanceof PostEntryResult.Posted posted)) {
             PostEntryResult.Rejected rejected = (PostEntryResult.Rejected) result;
+            // The capturing leg itself cannot be rejected - its account and currency were validated
+            // at hold time and a capture never touches `available` - so a rejection here is always
+            // about a counter leg, and always a caller bug rather than a business outcome. Callers
+            // that can name a bad counterparty (phase 04's FX handler names three system accounts
+            // and a wallet) resolve them before asking, so they can reject with a reason instead of
+            // failing a message they will never be able to process.
             throw new IllegalStateException("capture posting for reservation " + reservationId
-                    + " was rejected: " + rejected.reason()
-                    + " - the reservation's account and currency were already validated at hold time");
+                    + " was rejected: " + rejected.reason() + " on account " + rejected.accountId()
+                    + " - the reservation's own account and currency were validated at hold time, so "
+                    + "this is a counter leg the caller should have resolved first");
         }
 
         long remainder = reservation.getAmountMinor() - amountMinor;

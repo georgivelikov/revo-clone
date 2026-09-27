@@ -82,6 +82,44 @@ public class FxQuoteRepository {
                 .optional();
     }
 
+    /**
+     * {@code ACTIVE -> CONSUMED}, but only if the quote is still {@code ACTIVE} and still unexpired
+     * <em>at the database</em>. The whole execution decision is this one statement: two concurrent
+     * executes of one quote both reach it, the second blocks on the row lock, re-evaluates the
+     * {@code where} clause after the first commits and matches nothing. Exactly one caller gets
+     * {@code 1} back, and only that caller appends the outbox event - so "same quote executed twice
+     * concurrently produces one entry" is decided here rather than by the ledger's idempotency key,
+     * which is the second line of defence rather than the first.
+     *
+     * <p>{@code expires_at > :now} is in the statement and not only in the service's own check for
+     * the same reason: expiry is a server-clock fact, and putting it in the transition means an
+     * execute racing the expiry sweep cannot slip between the check and the update.
+     *
+     * @return 1 if this call performed the transition, 0 if it did not
+     */
+    public int markConsumed(UUID id, Instant asOf) {
+        return jdbcClient.sql("""
+                        update fx_quote set state = 'CONSUMED'
+                        where id = :id and state = 'ACTIVE' and expires_at > :now
+                        """)
+                .param("id", id)
+                .param("now", atUtc(asOf))
+                .update();
+    }
+
+    /**
+     * {@code CONSUMED -> CANCELLED}, the compensation transition: the ledger rejected the capture of
+     * a quote this service had already accepted. Conditional on {@code CONSUMED} so a replayed
+     * rejection cannot resurrect a quote that has since been dealt with some other way.
+     *
+     * @return 1 if this call performed the transition, 0 if it did not
+     */
+    public int markCancelled(UUID id) {
+        return jdbcClient.sql("update fx_quote set state = 'CANCELLED' where id = :id and state = 'CONSUMED'")
+                .param("id", id)
+                .update();
+    }
+
     public Optional<FxQuote> findByIdempotencyKey(String idempotencyKey) {
         return jdbcClient.sql("select " + COLUMNS + " from fx_quote where idempotency_key = :key")
                 .param("key", idempotencyKey)

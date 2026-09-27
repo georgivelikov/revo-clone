@@ -26,7 +26,9 @@ public class FakeLedgerReservations implements LedgerReservations {
 
     private final Map<UUID, Long> availableMinorByAccount = new HashMap<>();
     private final Map<String, HeldFunds> byIdempotencyKey = new HashMap<>();
+    private final Map<UUID, HeldFunds> heldById = new HashMap<>();
     private final List<HoldFundsCommand> holds = new ArrayList<>();
+    private final List<UUID> released = new ArrayList<>();
 
     public void fund(UUID ledgerAccountId, long availableMinor) {
         availableMinorByAccount.put(ledgerAccountId, availableMinor);
@@ -44,6 +46,13 @@ public class FakeLedgerReservations implements LedgerReservations {
         availableMinorByAccount.clear();
         byIdempotencyKey.clear();
         holds.clear();
+        heldById.clear();
+        released.clear();
+    }
+
+    /** The reservations {@link #release} was called for, in order. */
+    public List<UUID> released() {
+        return List.copyOf(released);
     }
 
     @Override
@@ -61,7 +70,22 @@ public class FakeLedgerReservations implements LedgerReservations {
         HeldFunds held = new HeldFunds(UUID.randomUUID(), command.ledgerAccountId(), command.amountMinor(),
                 command.currency(), command.expiresAt());
         byIdempotencyKey.put(command.idempotencyKey(), held);
+        heldById.put(held.id(), held);
         holds.add(command);
         return held;
+    }
+
+    /**
+     * Returns the held amount to {@code available}, and - like the real client - says nothing about
+     * a reservation it has never heard of: to a compensating caller, a hold that is already gone is
+     * the outcome it asked for.
+     */
+    @Override
+    public void release(UUID reservationId) {
+        released.add(reservationId);
+        HeldFunds held = heldById.remove(reservationId);
+        if (held != null) {
+            availableMinorByAccount.merge(held.ledgerAccountId(), held.amountMinor(), Long::sum);
+        }
     }
 }

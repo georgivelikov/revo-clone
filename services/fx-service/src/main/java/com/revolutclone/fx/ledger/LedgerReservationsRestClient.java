@@ -4,6 +4,9 @@ import com.revolutclone.fx.quote.error.InsufficientFundsForQuoteException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -36,6 +39,8 @@ import org.springframework.web.client.RestClient;
  */
 @Component
 public class LedgerReservationsRestClient implements LedgerReservations {
+
+    private static final Logger log = LoggerFactory.getLogger(LedgerReservationsRestClient.class);
 
     private static final String HOLD_PATH = "/internal/ledger/reservations";
 
@@ -84,6 +89,45 @@ public class LedgerReservationsRestClient implements LedgerReservations {
             // is precisely the case the hold's own expiry is designed to clean up.
             throw new LedgerUnavailableException(
                     "could not reach ledger-service to hold funds for the quote: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public void release(UUID reservationId) {
+        try {
+            http.post()
+                    .uri(HOLD_PATH + "/{id}/release", reservationId)
+                    .retrieve()
+                    // Compensation runs from a Kafka consumer, where there is no user token to relay
+                    // and this service has no identity of its own yet (a client-credentials identity
+                    // for service-to-service calls is a Phase 07 concern). An unauthenticated release
+                    // is therefore possible and must not become a retry loop: the hold's own 30-second
+                    // expiry releases it regardless, which is exactly the backstop the phase designed
+                    // it to be - "design every hold with a timeout owned by the resource".
+                    .onStatus(status -> status.value() == HttpStatus.UNAUTHORIZED.value()
+                                    || status.value() == HttpStatus.FORBIDDEN.value(),
+                            (request, response) -> log.warn("ledger refused an unauthenticated release of "
+                                    + "reservation {} ({}); leaving it to the hold's own expiry",
+                                    reservationId, response.getStatusCode()))
+                    // 404 (gone) and 409 (already captured, released or expired) both mean the funds
+                    // are not held any more, which is the only thing the caller wanted. Treating them
+                    // as failures would turn a compensation that has already happened into a retry
+                    // loop against a reservation that will never be HELD again.
+                    .onStatus(HttpStatusCode::is4xxClientError,
+                            (request, response) -> log.info("ledger will not release reservation {} ({}): "
+                                    + "the hold is already gone, which is what this asked for",
+                                    reservationId, response.getStatusCode()))
+                    .onStatus(HttpStatusCode::is5xxServerError,
+                            (request, response) -> {
+                                throw new LedgerUnavailableException("ledger answered "
+                                        + response.getStatusCode() + " releasing reservation "
+                                        + reservationId + ": " + bodyOf(response), null);
+                            })
+                    .toBodilessEntity();
+        } catch (ResourceAccessException ex) {
+            throw new LedgerUnavailableException(
+                    "could not reach ledger-service to release reservation " + reservationId + ": "
+                            + ex.getMessage(), ex);
         }
     }
 
