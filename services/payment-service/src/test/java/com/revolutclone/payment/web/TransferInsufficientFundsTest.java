@@ -70,7 +70,8 @@ import tools.jackson.databind.json.JsonMapper;
         "revolut.messaging.outbox.poll-delay-ms=300000",
         // A deliberately low cap so the "above the cap" case is reachable with a readable
         // number. It is not a balance - see PaymentLimitsProperties.
-        "revolut.payments.max-amount-minor=500000"
+        "revolut.payments.max-amount-minor=500000",
+        "revolut.payment.fx.base-url=http://fx.invalid"
 })
 class TransferInsufficientFundsTest {
 

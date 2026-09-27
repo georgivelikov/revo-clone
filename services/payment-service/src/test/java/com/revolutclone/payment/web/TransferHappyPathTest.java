@@ -75,7 +75,8 @@ import tools.jackson.databind.json.JsonMapper;
         "spring.kafka.listener.auto-startup=false",
         // The outbox publisher must not fire during the test: these assertions are about the
         // rows it would later pick up, and there is no broker here to publish them to.
-        "revolut.messaging.outbox.poll-delay-ms=300000"
+        "revolut.messaging.outbox.poll-delay-ms=300000",
+        "revolut.payment.fx.base-url=http://fx.invalid"
 })
 class TransferHappyPathTest {
 

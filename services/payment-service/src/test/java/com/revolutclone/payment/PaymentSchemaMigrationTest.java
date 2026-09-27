@@ -42,7 +42,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @TestPropertySource(properties = {
         "spring.kafka.bootstrap-servers=127.0.0.1:9092",
-        "spring.kafka.listener.auto-startup=false"
+        "spring.kafka.listener.auto-startup=false",
+        "revolut.payment.fx.base-url=http://fx.invalid"
 })
 class PaymentSchemaMigrationTest {
 

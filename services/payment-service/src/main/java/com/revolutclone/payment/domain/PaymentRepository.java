@@ -14,4 +14,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByInitiatorUserIdAndIdempotencyKey(UUID initiatorUserId, String idempotencyKey);
+
+    /**
+     * The correlation a cross-currency transfer's ledger result is matched back through:
+     * {@code fxquote:<quoteId>} is the ledger key, not {@code payment:<paymentId>}, because the
+     * entry this posts is {@code FX}-typed and captures fx-service's reservation - see
+     * {@code CrossCurrencyEntryPostedHandler}/{@code CrossCurrencyEntryRejectedHandler}.
+     */
+    Optional<Payment> findByQuoteId(UUID quoteId);
 }

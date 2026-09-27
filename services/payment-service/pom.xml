@@ -63,6 +63,23 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <!-- Boot 4.1 splits RestClient's autoconfiguration into its own module and
+           spring-boot-starter-web does NOT pull it in, so without this the pre-configured
+           RestClient.Builder is not a bean at all. See docs/spring-boot-4-notes.md. payment-service
+           is the second service to call another over HTTP: a cross-currency transfer has to get a
+           firm rate from fx-service before the user confirms, so that one hop cannot go through the
+           outbox - plans/phase-04-fx-multicurrency.md's Variant section. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
+    </dependency>
+    <dependency>
+      <!-- Wraps the fx-service quote call - the phase names this explicitly: "behind a
+           Resilience4j circuit breaker". Version comes from spring-cloud-dependencies, imported at
+           the root; confirmed present at 5.0.3 in docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>

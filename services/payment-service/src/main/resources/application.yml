@@ -31,6 +31,21 @@ revolut:
     # Per-transaction cap in minor units, NOT a balance check - the ledger owns balances and
     # rejects an overdraw with INSUFFICIENT_FUNDS after the fact. See PaymentLimitsProperties.
     max-amount-minor: ${PAYMENT_MAX_AMOUNT_MINOR:10000000}
+  payment:
+    fx:
+      base-url: ${FX_BASE_URL}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      fx-quote:
+        # A cross-currency transfer is synchronous on this one call - see
+        # plans/phase-04-fx-multicurrency.md's Variant section. Defaults are otherwise Resilience4j's
+        # own; tuned here only where the phase's own reasoning calls for a specific number.
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 5
 
 management:
   endpoints:

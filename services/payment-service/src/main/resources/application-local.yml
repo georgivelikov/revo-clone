@@ -13,6 +13,11 @@ spring:
         jwt:
           issuer-uri: http://127.0.0.1:8180/realms/revolut
 
+revolut:
+  payment:
+    fx:
+      base-url: http://127.0.0.1:8085
+
 logging:
   structured:
     format:

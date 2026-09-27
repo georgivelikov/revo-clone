@@ -21,12 +21,21 @@ public enum PaymentRejectionReason {
 
     TARGET_ACCOUNT_NOT_ACTIVE,
 
-    /** Same-currency transfers only in this phase; FX arrives in phase 04. */
+    /** The request's own {@code currency} does not match the source account's. */
     CURRENCY_MISMATCH,
 
     /** Source and target are the same account, which would net to nothing. */
     SAME_ACCOUNT,
 
     /** Above {@code revolut.payments.max-amount-minor}. */
-    AMOUNT_ABOVE_LIMIT
+    AMOUNT_ABOVE_LIMIT,
+
+    /**
+     * A cross-currency transfer (plans/phase-04-fx-multicurrency.md task 8) could not get a quote:
+     * fx-service refused it (no rate, no wallet to credit) or could not be reached at all,
+     * including the circuit breaker being open. Nothing was reserved and nothing was written -
+     * {@link com.revolutclone.payment.fx.FxQuoteUnavailableException} is thrown before this
+     * service's own transaction ever opens.
+     */
+    FX_QUOTE_UNAVAILABLE
 }

@@ -61,7 +61,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         "spring.kafka.listener.auto-startup=false",
         // The outbox rows are the assertion; the publisher must not carry them off mid-test, and
         // there is no broker here to publish them to anyway.
-        "revolut.messaging.outbox.poll-delay-ms=300000"
+        "revolut.messaging.outbox.poll-delay-ms=300000",
+        "revolut.payment.fx.base-url=http://fx.invalid"
 })
 class LedgerEventRedeliveryTest {
 

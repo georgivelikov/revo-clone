@@ -46,7 +46,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://example.invalid/realms/test",
         "spring.kafka.bootstrap-servers=127.0.0.1:9092",
         "spring.kafka.listener.auto-startup=false",
-        "revolut.messaging.outbox.poll-delay-ms=300000"
+        "revolut.messaging.outbox.poll-delay-ms=300000",
+        "revolut.payment.fx.base-url=http://fx.invalid"
 })
 class CrossUserAuthTest {
 

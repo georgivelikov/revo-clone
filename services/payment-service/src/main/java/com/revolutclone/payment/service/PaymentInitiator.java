@@ -2,6 +2,11 @@ package com.revolutclone.payment.service;
 
 import com.revolutclone.payment.domain.Payment;
 import com.revolutclone.payment.domain.PaymentRepository;
+import com.revolutclone.payment.fx.FxQuoteCommand;
+import com.revolutclone.payment.fx.FxQuoteHold;
+import com.revolutclone.payment.fx.FxQuoteUnavailableException;
+import com.revolutclone.payment.fx.FxQuotes;
+import com.revolutclone.payment.web.error.PaymentRejectedException;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -30,6 +35,13 @@ import org.springframework.stereotype.Service;
  * some <em>other</em> constraint and the original exception is rethrown rather than being
  * swallowed into a misleading "payment not found".
  *
+ * <p><strong>Cross-currency (plans/phase-04-fx-multicurrency.md task 8) inserts one more step
+ * between the two reads:</strong> once {@link PaymentTransactionWriter#validate} says the
+ * transfer crosses currencies, this class - not the writer - calls fx-service for a quote,
+ * because that HTTP call must happen outside any local transaction (see the writer's own
+ * javadoc). A quote fx-service will not give is exactly the same shape of rejection as any other
+ * {@link PaymentRejectedException}: synchronous, before any row exists.
+ *
  * <p>Deliberately no body comparison here: replaying the old response for the same key with a
  * <em>different</em> body is a 422 at the gateway (task 03.5), where the request-body hash
  * lives. Duplicating that check here would need this service to keep its own hash of a body it
@@ -40,10 +52,12 @@ public class PaymentInitiator {
 
     private final PaymentRepository payments;
     private final PaymentTransactionWriter writer;
+    private final FxQuotes fxQuotes;
 
-    public PaymentInitiator(PaymentRepository payments, PaymentTransactionWriter writer) {
+    public PaymentInitiator(PaymentRepository payments, PaymentTransactionWriter writer, FxQuotes fxQuotes) {
         this.payments = payments;
         this.writer = writer;
+        this.fxQuotes = fxQuotes;
     }
 
     public Payment initiate(InitiatePaymentCommand command) {
@@ -52,14 +66,41 @@ public class PaymentInitiator {
             return alreadyAccepted.get();
         }
         try {
-            return writer.insertPendingWithOutbox(command);
+            ValidatedTransfer validated = writer.validate(command);
+            if (!validated.isCrossCurrency()) {
+                return writer.persistSameCurrency(command);
+            }
+            FxQuoteHold quote = obtainQuote(command, validated);
+            return writer.persistCrossCurrency(command, quote);
         } catch (DataIntegrityViolationException lostTheRace) {
             return findExisting(command).orElseThrow(() -> lostTheRace);
+        }
+    }
+
+    private FxQuoteHold obtainQuote(InitiatePaymentCommand command, ValidatedTransfer validated) {
+        try {
+            return fxQuotes.quote(new FxQuoteCommand(
+                    fxQuoteIdempotencyKey(command),
+                    command.currency(),
+                    validated.target().getCurrency(),
+                    command.amountMinor(),
+                    validated.target().getUserId()));
+        } catch (FxQuoteUnavailableException ex) {
+            throw new PaymentRejectedException(PaymentRejectionReason.FX_QUOTE_UNAVAILABLE, ex.getMessage());
         }
     }
 
     private Optional<Payment> findExisting(InitiatePaymentCommand command) {
         return payments.findByInitiatorUserIdAndIdempotencyKey(
                 command.initiatorUserId(), command.idempotencyKey());
+    }
+
+    /**
+     * {@code fx_quote.idempotency_key} is globally unique, while the client's own header is
+     * unique only per initiator - namespacing by {@code initiatorUserId} is what stops two
+     * different users retrying with the same header value from colliding there.
+     */
+    private static String fxQuoteIdempotencyKey(InitiatePaymentCommand command) {
+        return "payment:" + command.initiatorUserId() + ":" + command.idempotencyKey();
     }
 }

@@ -89,6 +89,23 @@ public class Payment implements Persistable<UUID> {
     @Column(name = "ledger_entry_id")
     private UUID ledgerEntryId;
 
+    /**
+     * Set together, only for a cross-currency transfer (plans/phase-04-fx-multicurrency.md task
+     * 8) - {@code null} for an ordinary same-currency one. {@link #currency}/{@link #amountMinor}
+     * keep meaning the <em>source</em> side throughout; these three are what fx-service's quote
+     * added: the currency and amount the recipient actually receives, and the quote itself, so a
+     * ledger result correlated by {@code fxquote:<quoteId>} can be matched back to this row.
+     */
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "target_currency", length = 3, columnDefinition = "char(3)")
+    private String targetCurrency;
+
+    @Column(name = "target_amount_minor")
+    private Long targetAmountMinor;
+
+    @Column(name = "quote_id")
+    private UUID quoteId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -104,6 +121,18 @@ public class Payment implements Persistable<UUID> {
 
     public Payment(UUID id, String idempotencyKey, UUID initiatorUserId, UUID sourceAccountId,
             UUID targetAccountId, long amountMinor, String currency, String reference) {
+        this(id, idempotencyKey, initiatorUserId, sourceAccountId, targetAccountId, amountMinor, currency,
+                reference, null, null, null);
+    }
+
+    /**
+     * The cross-currency variant: {@code targetCurrency}/{@code targetAmountMinor}/{@code quoteId}
+     * are set together, from the one fx-service quote behind this transfer, or all left
+     * {@code null} for a same-currency one.
+     */
+    public Payment(UUID id, String idempotencyKey, UUID initiatorUserId, UUID sourceAccountId,
+            UUID targetAccountId, long amountMinor, String currency, String reference,
+            String targetCurrency, Long targetAmountMinor, UUID quoteId) {
         if (amountMinor <= 0) {
             throw new IllegalArgumentException("amountMinor must be > 0, got " + amountMinor);
         }
@@ -115,6 +144,9 @@ public class Payment implements Persistable<UUID> {
         this.amountMinor = amountMinor;
         this.currency = currency;
         this.reference = reference;
+        this.targetCurrency = targetCurrency;
+        this.targetAmountMinor = targetAmountMinor;
+        this.quoteId = quoteId;
         this.status = PaymentStatus.PENDING;
     }
 
@@ -224,6 +256,25 @@ public class Payment implements Persistable<UUID> {
 
     public UUID getLedgerEntryId() {
         return ledgerEntryId;
+    }
+
+    /** {@code null} for a same-currency transfer. */
+    public String getTargetCurrency() {
+        return targetCurrency;
+    }
+
+    /** {@code null} for a same-currency transfer. */
+    public Long getTargetAmountMinor() {
+        return targetAmountMinor;
+    }
+
+    /** {@code null} for a same-currency transfer. */
+    public UUID getQuoteId() {
+        return quoteId;
+    }
+
+    public boolean isCrossCurrency() {
+        return quoteId != null;
     }
 
     public Instant getCreatedAt() {

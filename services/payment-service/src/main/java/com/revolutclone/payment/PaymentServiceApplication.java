@@ -3,6 +3,7 @@ package com.revolutclone.payment;
 import com.revolutclone.payment.config.PaymentLimitsProperties;
 import com.revolutclone.payment.domain.Payment;
 import com.revolutclone.payment.domain.PaymentRepository;
+import com.revolutclone.payment.fx.FxClientProperties;
 import com.revolutclone.payment.readmodel.AccountView;
 import com.revolutclone.payment.readmodel.AccountViewRepository;
 import org.springframework.boot.SpringApplication;
@@ -23,7 +24,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @EntityScan(basePackageClasses = {Payment.class, AccountView.class})
 @EnableJpaRepositories(basePackageClasses = {PaymentRepository.class, AccountViewRepository.class})
-@EnableConfigurationProperties(PaymentLimitsProperties.class)
+@EnableConfigurationProperties({PaymentLimitsProperties.class, FxClientProperties.class})
 public class PaymentServiceApplication {
 
     public static void main(String[] args) {

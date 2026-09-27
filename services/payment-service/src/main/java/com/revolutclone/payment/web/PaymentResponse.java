@@ -13,7 +13,10 @@ import java.util.UUID;
  * response for a duplicate key is still a complete answer.
  *
  * <p>{@code failureReason} and {@code ledgerEntryId} are serialized even when null, so the UI
- * can tell "PENDING, no reason yet" from a field that was dropped.
+ * can tell "PENDING, no reason yet" from a field that was dropped. {@code targetCurrency}/
+ * {@code targetAmountMinor} are the same - null for a same-currency transfer, and only for one
+ * (plans/phase-04-fx-multicurrency.md task 8) do they differ from {@code currency}/
+ * {@code amountMinor}, which always stay the <em>source</em> side.
  */
 public record PaymentResponse(
         UUID paymentId,
@@ -22,6 +25,8 @@ public record PaymentResponse(
         UUID targetAccountId,
         long amountMinor,
         String currency,
+        String targetCurrency,
+        Long targetAmountMinor,
         String reference,
         String failureReason,
         UUID ledgerEntryId,
@@ -36,6 +41,8 @@ public record PaymentResponse(
                 payment.getTargetAccountId(),
                 payment.getAmountMinor(),
                 payment.getCurrency(),
+                payment.getTargetCurrency(),
+                payment.getTargetAmountMinor(),
                 payment.getReference(),
                 payment.getFailureReason(),
                 payment.getLedgerEntryId(),
