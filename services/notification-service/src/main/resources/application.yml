@@ -48,6 +48,9 @@ revolut:
     feed:
       # How many persisted notifications GET /api/notifications returns.
       page-size: ${NOTIFICATION_FEED_PAGE_SIZE:50}
+    rates:
+      # ~2/s per plans/phase-04-fx-multicurrency.md task 9 - see RateTickBroadcaster.
+      broadcast-delay-ms: ${RATE_BROADCAST_DELAY_MS:500}
 
 management:
   endpoints:

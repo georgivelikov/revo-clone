@@ -81,12 +81,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Only /queue: this service pushes to individual users and has no broadcast destination yet.
-        registry.enableSimpleBroker("/queue");
+        // /queue for per-user pushes (NotificationFanOut); /topic for the one broadcast
+        // destination this service has, RateTickBroadcaster's /topic/rates (task 9) - a rate is
+        // nobody's secret, so it needs no per-user addressing at all.
+        registry.enableSimpleBroker("/queue", "/topic");
         registry.setUserDestinationPrefix(USER_DESTINATION_PREFIX);
         // No setApplicationDestinationPrefixes on purpose - there is no @MessageMapping here. The
         // socket is one-way by design: everything a client wants to *do* goes over HTTP through the
         // gateway, where it is authenticated, rate-limited and idempotent. A writable socket would
-        // be a second, weaker door into the same money.
+        // be a second, weaker door into the same money. Subscribing to /topic/rates needs no
+        // app-level route either - the simple broker handles STOMP SUBSCRIBE natively.
     }
 }
