@@ -14,6 +14,9 @@ public final class FxMath {
     private static final int RANDOM_WALK_SCALE = 8;
     private static final BigDecimal RANDOM_WALK_FLOOR = new BigDecimal("0.00010000");
 
+    /** Matches the {@code numeric(20,10)} column every rate is ultimately persisted in. */
+    private static final int RATE_SCALE = 10;
+
     private FxMath() {
     }
 
@@ -72,5 +75,25 @@ public final class FxMath {
         BigDecimal noise = new BigDecimal(gaussianNoiseSample).multiply(vol);
         BigDecimal next = mid.add(mid.multiply(noise)).setScale(RANDOM_WALK_SCALE, RoundingMode.HALF_EVEN);
         return (next.compareTo(RANDOM_WALK_FLOOR) < 0 ? RANDOM_WALK_FLOOR : next).toPlainString();
+    }
+
+    /**
+     * Derives the reverse direction of a canonically-ordered pair, e.g. {@code GBP/EUR} from a
+     * stored {@code EUR/GBP} mid. plans/phase-04-fx-multicurrency.md's rate feed design is
+     * explicit that this must be *derived*, never stored as a second independent series: "Storing
+     * both directions independently guarantees they drift apart and produce arbitrage within your
+     * own system." {@code fx-service}'s rate cache calls this on every reverse-direction lookup
+     * rather than caching the result, so the two directions can never disagree with each other.
+     *
+     * <p>Decimal text in and out, like {@link #randomWalkStep} - CLAUDE.md's hard rule 1 confines
+     * {@link BigDecimal} to this class.
+     */
+    public static String invert(String mid) {
+        Objects.requireNonNull(mid, "mid");
+        BigDecimal value = new BigDecimal(mid);
+        if (value.signum() <= 0) {
+            throw new IllegalArgumentException("rate must be positive: " + mid);
+        }
+        return BigDecimal.ONE.divide(value, RATE_SCALE, RoundingMode.HALF_EVEN).toPlainString();
     }
 }

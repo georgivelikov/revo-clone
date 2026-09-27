@@ -195,6 +195,32 @@ services:
       retries: 10
       start_period: 30s
 
+  fx-service:
+    build:
+      context: .
+      dockerfile: services/fx-service/Dockerfile
+    container_name: revolut-fx-service
+    profiles: ["services"]
+    ports:
+      - "8085:8085"
+    environment:
+      FX_DB_URL: jdbc:postgresql://postgres:5432/fx
+      FX_DB_USER: fx
+      FX_DB_PASSWORD: fx
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8085 && printf 'GET /actuator/health/readiness HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   # Vite inlines VITE_* variables into the static bundle at build time (see web/Dockerfile), so
   # they are build args here rather than `environment:` - a browser loading the built bundle
   # has no container DNS, so these point at the same 127.0.0.1 host ports every other service

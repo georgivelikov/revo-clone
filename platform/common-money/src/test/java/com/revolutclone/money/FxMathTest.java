@@ -200,4 +200,45 @@ class FxMathTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    @DisplayName("inverting a rate")
+    class InvertingARate {
+
+        @Test
+        void invertsToTenDecimalPlaces() {
+            assertThat(FxMath.invert("0.8600000000")).isEqualTo("1.1627906977");
+        }
+
+        @Test
+        void invertingTwiceRoundTripsWithinRoundingTolerance() {
+            String mid = "0.8600000000";
+            String roundTripped = FxMath.invert(FxMath.invert(mid));
+
+            // Two HALF_EVEN roundings at scale 10 can only ever differ by a unit in the last
+            // place - nowhere near the size of any spread this gets composed with downstream.
+            assertThat(new BigDecimal(roundTripped).subtract(new BigDecimal(mid)).abs())
+                    .isLessThanOrEqualTo(new BigDecimal("0.0000000001"));
+        }
+
+        @Test
+        void theProductOfARateAndItsInverseIsOne() {
+            String mid = "1.08000000";
+            BigDecimal product = new BigDecimal(mid).multiply(new BigDecimal(FxMath.invert(mid)));
+
+            assertThat(product.subtract(BigDecimal.ONE).abs()).isLessThan(new BigDecimal("0.0000000001"));
+        }
+
+        @Test
+        void rejectsZero() {
+            assertThatThrownBy(() -> FxMath.invert("0"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void rejectsNegative() {
+            assertThatThrownBy(() -> FxMath.invert("-0.86"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
 }
