@@ -11,7 +11,7 @@
     {
       "id": "00.0",
       "phase": "phase-00-foundations.md",
-      "title": "**Confirm the toolchain.** `java -version` reports 25, `mvn -version` reports the same JDK, and `JAVA_HOME` points at it. That last part is the one to actually do \u2014 `JAVA_HOME` is currently unset. Maven finds the JDK via `PATH` so the reactor builds either way, but IDE run configurations and some Maven plugins read `JAVA_HOME` directly, and an unset value produces failures that look like anything except a JDK problem.",
+      "title": "**Confirm the toolchain.** `java -version` reports 25, `mvn -version` reports the same JDK, and `JAVA_HOME` points at it. That last part is the one to actually do — `JAVA_HOME` is currently unset. Maven finds the JDK via `PATH` so the reactor builds either way, but IDE run configurations and some Maven plugins read `JAVA_HOME` directly, and an unset value produces failures that look like anything except a JDK problem.",
       "kind": "verify",
       "model": "sonnet",
       "deps": [],
@@ -45,7 +45,7 @@
     {
       "id": "00.2",
       "phase": "phase-00-foundations.md",
-      "title": "Root `pom.xml` \u2014 `spring-boot-starter-parent` 4.1.1, `java.version=25`, `spring-cloud-dependencies:2025.1.3` BOM import, module list. Then run the Boot 4 verification list above before writing any code against it.",
+      "title": "Root `pom.xml` — `spring-boot-starter-parent` 4.1.1, `java.version=25`, `spring-cloud-dependencies:2025.1.3` BOM import, module list. Then run the Boot 4 verification list above before writing any code against it.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -105,7 +105,7 @@
     {
       "id": "00.5",
       "phase": "phase-00-foundations.md",
-      "title": "`contracts`: `EventEnvelope`, marker interface, and the Phase 01\u201303 events as stubs.",
+      "title": "`contracts`: `EventEnvelope`, marker interface, and the Phase 01–03 events as stubs.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -185,7 +185,7 @@
     {
       "id": "00.9",
       "phase": "phase-00-foundations.md",
-      "title": "`infra/postgres/init-databases.sql` \u2014 8 databases, one non-superuser role per service.",
+      "title": "`infra/postgres/init-databases.sql` — 8 databases, one non-superuser role per service.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -261,7 +261,7 @@
     {
       "id": "00.13",
       "phase": "phase-00-foundations.md",
-      "title": "Config hygiene pass: every endpoint from an environment variable, local defaults only in the `local` profile. Establish this now \u2014 it is far more annoying to retrofit across ten services than to start with.",
+      "title": "Config hygiene pass: every endpoint from an environment variable, local defaults only in the `local` profile. Establish this now — it is far more annoying to retrofit across ten services than to start with.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -279,7 +279,7 @@
     {
       "id": "00.14",
       "phase": "phase-00-foundations.md",
-      "title": "`README.md` \u2014 architecture diagram, how to run, port table.",
+      "title": "`README.md` — architecture diagram, how to run, port table.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -297,7 +297,7 @@
     {
       "id": "01.1",
       "phase": "phase-01-identity-account-gateway.md",
-      "title": "`services/api-gateway` \u2014 routes, security, CORS, rate limiter, actuator.",
+      "title": "`services/api-gateway` — routes, security, CORS, rate limiter, actuator.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -318,7 +318,7 @@
     {
       "id": "01.2",
       "phase": "phase-01-identity-account-gateway.md",
-      "title": "`services/identity-service` \u2014 Flyway `V1__user_profile.sql` + the shared outbox migration, entity, repository, registration via `IdentityProviderPort`, register/me endpoints.",
+      "title": "`services/identity-service` — Flyway `V1__user_profile.sql` + the shared outbox migration, entity, repository, registration via `IdentityProviderPort`, register/me endpoints.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -376,7 +376,7 @@
     {
       "id": "01.5",
       "phase": "phase-01-identity-account-gateway.md",
-      "title": "`services/account-service` \u2014 Flyway, entity, the `UserRegisteredV1` consumer, wallet creation, `AccountOpenedV1` publication, read endpoints.",
+      "title": "`services/account-service` — Flyway, entity, the `UserRegisteredV1` consumer, wallet creation, `AccountOpenedV1` publication, read endpoints.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -452,7 +452,7 @@
     {
       "id": "02.2",
       "phase": "phase-02-ledger.md",
-      "title": "`V2__balanced_trigger.sql` \u2014 the deferred constraint trigger and its function.",
+      "title": "`V2__balanced_trigger.sql` — the deferred constraint trigger and its function.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -491,7 +491,7 @@
     {
       "id": "02.4",
       "phase": "phase-02-ledger.md",
-      "title": "`PostingEngine` \u2014 validate, insert, update balances per the balance-column semantics table, append outbox. One transaction. Put that table and the sign convention in a comment at the top of the class.",
+      "title": "`PostingEngine` — validate, insert, update balances per the balance-column semantics table, append outbox. One transaction. Put that table and the sign convention in a comment at the top of the class.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -534,7 +534,7 @@
     {
       "id": "02.6",
       "phase": "phase-02-ledger.md",
-      "title": "`ReservationService` \u2014 hold / capture (full and partial) / release / expiry sweep.",
+      "title": "`ReservationService` — hold / capture (full and partial) / release / expiry sweep.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -575,7 +575,7 @@
     {
       "id": "02.8",
       "phase": "phase-02-ledger.md",
-      "title": "Consume `AccountOpenedV1` \u2192 create the matching `ledger_account` and zero balance, then publish `LedgerAccountCreatedV1` so `account-service` can fill `ledger_account_id`.",
+      "title": "Consume `AccountOpenedV1` → create the matching `ledger_account` and zero balance, then publish `LedgerAccountCreatedV1` so `account-service` can fill `ledger_account_id`.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -631,7 +631,7 @@
     {
       "id": "02.11",
       "phase": "phase-02-ledger.md",
-      "title": "A funding endpoint (`EXTERNAL_CLEARING` \u2192 wallet) so later phases have money to move.",
+      "title": "A funding endpoint (`EXTERNAL_CLEARING` → wallet) so later phases have money to move.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -687,7 +687,7 @@
     {
       "id": "03.3",
       "phase": "phase-03-payments-and-ui.md",
-      "title": "`POST /api/payments` \u2192 PENDING + outbox, in one transaction; 202 response. Ledger key derived as `payment:<paymentId>`, never the client's header.",
+      "title": "`POST /api/payments` → PENDING + outbox, in one transaction; 202 response. Ledger key derived as `payment:<paymentId>`, never the client's header.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -1020,7 +1020,7 @@
     {
       "id": "04.8",
       "phase": "phase-04-fx-multicurrency.md",
-      "title": "`payment-service`: cross-currency transfers \u2014 obtain a quote, then the same saga with compensation on rejection.",
+      "title": "`payment-service`: cross-currency transfers — obtain a quote, then the same saga with compensation on rejection.",
       "kind": "build",
       "model": "opus",
       "deps": [
@@ -1105,7 +1105,7 @@
         "CardLookupByPanHashTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/05.1-card-service-scaffold-flyway",
       "commit": null,
@@ -1332,7 +1332,7 @@
     {
       "id": "06.2",
       "phase": "phase-06-vaults-analytics.md",
-      "title": "MCC \u2192 category seed data; merchant rules table + seeds; user overrides.",
+      "title": "MCC → category seed data; merchant rules table + seeds; user overrides.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -1709,7 +1709,7 @@
     {
       "id": "08.1",
       "phase": "phase-08-load-and-observability.md",
-      "title": "`docker-compose.obs.yml` \u2014 Prometheus, Grafana, kafka-exporter, postgres-exporter.",
+      "title": "`docker-compose.obs.yml` — Prometheus, Grafana, kafka-exporter, postgres-exporter.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
@@ -1835,7 +1835,7 @@
     {
       "id": "08.8",
       "phase": "phase-08-load-and-observability.md",
-      "title": "`hotspot.js` \u2014 measure the single-account ceiling.",
+      "title": "`hotspot.js` — measure the single-account ceiling.",
       "kind": "build",
       "model": "sonnet",
       "deps": [
