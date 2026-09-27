@@ -241,4 +241,69 @@ class FxMathTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    @DisplayName("applying a spread to a mid rate")
+    class ApplyingASpread {
+
+        @Test
+        void fiftyBasisPointsIsHalfAPercentOffTheMid() {
+            assertThat(FxMath.applySpread("0.8600000000", 50)).isEqualTo("0.8557000000");
+        }
+
+        @Test
+        void theClientRateIsAlwaysTheWorseOfTheTwoForTheClient() {
+            assertThat(new BigDecimal(FxMath.applySpread("1.0800000000", 50)))
+                    .isLessThan(new BigDecimal("1.0800000000"));
+        }
+
+        @Test
+        void aZeroSpreadIsTheMidRateItself() {
+            assertThat(FxMath.applySpread("0.8600000000", 0)).isEqualTo("0.8600000000");
+        }
+
+        @Test
+        void theResultIsAlwaysScaledToTheRateColumnsTenDigits() {
+            // 162.5 JPY per EUR at 50 bps is 161.6875, which would otherwise carry four digits.
+            assertThat(FxMath.applySpread("162.5", 50)).isEqualTo("161.6875000000");
+        }
+
+        @Test
+        void rejectsANonPositiveMid() {
+            assertThatThrownBy(() -> FxMath.applySpread("0", 50)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> FxMath.applySpread("-0.86", 50)).isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void rejectsASpreadThatWouldBeNegativeOrWipeOutTheRate() {
+            assertThatThrownBy(() -> FxMath.applySpread("0.86", -1)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> FxMath.applySpread("0.86", 10_000))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void theSpreadRateAndTheClientRateAddBackUpToTheMidExactly() {
+            // The whole point of deriving the fee rate by subtraction: the three buy-side legs of
+            // an FX entry are computed from these two rates, so any inexactness here would land in
+            // FEE_INCOME as drift rather than in FX_PNL as a residual.
+            String mid = "0.8637123456";
+            String clientRate = FxMath.applySpread(mid, 50);
+
+            assertThat(new BigDecimal(clientRate).add(new BigDecimal(FxMath.spreadRate(mid, clientRate))))
+                    .isEqualByComparingTo(new BigDecimal(mid));
+        }
+
+        @Test
+        void aZeroSpreadHasAZeroFeeRate() {
+            String mid = "0.8600000000";
+
+            assertThat(new BigDecimal(FxMath.spreadRate(mid, FxMath.applySpread(mid, 0)))).isEqualByComparingTo("0");
+        }
+
+        @Test
+        void aClientRateBetterThanTheMidIsRejectedRatherThanPaidOut() {
+            assertThatThrownBy(() -> FxMath.spreadRate("0.8600000000", "0.8700000000"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
 }

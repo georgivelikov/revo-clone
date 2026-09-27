@@ -11,9 +11,9 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Overrides common-security's default filter chain to state explicitly that every
  * {@code /api/fx/**} route requires authentication - same precedent as identity-service,
- * account-service, ledger-service and payment-service. No such route exists yet (task 04.4
- * adds the first one); this exists now so the service boots as a stateless JWT resource server
- * from the start rather than picking up security config as an afterthought once endpoints land.
+ * account-service, ledger-service and payment-service. The first such route is
+ * {@code POST /api/fx/quotes}, which reserves the caller's funds and therefore identifies them
+ * from the token's subject rather than from anything in the request body.
  */
 @Configuration
 @EnableWebSecurity

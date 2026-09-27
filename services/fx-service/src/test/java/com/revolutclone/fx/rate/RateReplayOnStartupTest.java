@@ -42,7 +42,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestPropertySource(properties = {
         "spring.kafka.bootstrap-servers=127.0.0.1:9092",
         "spring.kafka.listener.auto-startup=false",
-        "revolut.messaging.outbox.poll-delay-ms=300000"
+        "revolut.messaging.outbox.poll-delay-ms=300000",
+        // Task 04.4 gave the context a ledger client: its base URL is bound at startup, so it has
+        // to resolve even in a test that never calls the ledger. Nothing here places a hold.
+        "revolut.fx.ledger.base-url=http://ledger.invalid"
 })
 class RateReplayOnStartupTest {
 

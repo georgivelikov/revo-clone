@@ -27,6 +27,13 @@ spring:
 revolut:
   security:
     roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  fx:
+    quote:
+      # 50 bps is the phase's default; raise it to make the FEE_INCOME line move in a demo.
+      spread-bps: ${FX_SPREAD_BPS:50}
+      ttl: ${FX_QUOTE_TTL:30s}
+    ledger:
+      base-url: ${LEDGER_BASE_URL}
 
 management:
   endpoints:

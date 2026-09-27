@@ -63,6 +63,15 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <!-- Boot 4.1 splits RestClient's autoconfiguration into its own module and
+           spring-boot-starter-web does NOT pull it in, so without this the pre-configured
+           RestClient.Builder is not a bean at all. See docs/spring-boot-4-notes.md. fx-service is
+           the first service here to call another over HTTP: quoting has to reserve funds
+           synchronously, so that one hop cannot go through the outbox. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>

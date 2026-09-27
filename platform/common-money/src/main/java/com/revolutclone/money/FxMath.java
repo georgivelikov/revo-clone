@@ -17,6 +17,9 @@ public final class FxMath {
     /** Matches the {@code numeric(20,10)} column every rate is ultimately persisted in. */
     private static final int RATE_SCALE = 10;
 
+    /** Basis points per unit: 50 bps is 0.5%. */
+    private static final int BPS_PER_UNIT = 10_000;
+
     private FxMath() {
     }
 
@@ -153,6 +156,68 @@ public final class FxMath {
         BigDecimal noise = new BigDecimal(gaussianNoiseSample).multiply(vol);
         BigDecimal next = mid.add(mid.multiply(noise)).setScale(RANDOM_WALK_SCALE, RoundingMode.HALF_EVEN);
         return (next.compareTo(RANDOM_WALK_FLOOR) < 0 ? RANDOM_WALK_FLOOR : next).toPlainString();
+    }
+
+    /**
+     * The rate a client is actually given: the mid rate less {@code spreadBps} basis points of
+     * itself, rounded to {@link #RATE_SCALE} so the result is exactly what the
+     * {@code numeric(20,10)} column will hold and nothing is lost between quoting and persisting.
+     *
+     * <p>Always applied in the direction the client sells, so the spread is always in the house's
+     * favour whichever way round the pair is asked for - a rate below mid means fewer units of the
+     * buy currency for the same sell amount. That single-sided application is what stops
+     * plans/phase-04-fx-multicurrency.md's inverse-pair trap: "`1/0.8543` is not exactly the
+     * GBP/EUR rate once spread is applied in both directions. Derive one direction from the other
+     * and apply spread once."
+     *
+     * <p>Pair this with {@link #spreadRate}, not with an independently computed fee: the two
+     * together are exactly the mid rate, which is what lets the FX entry's three buy-side legs
+     * (pool at the mid rate, client at this rate, the difference as fee revenue) reconstruct the
+     * mid amount with only a sub-unit residual left over.
+     *
+     * @throws IllegalArgumentException if {@code mid} is not positive, or {@code spreadBps} is
+     *                                  negative or would wipe out the whole rate
+     */
+    public static String applySpread(String mid, int spreadBps) {
+        Objects.requireNonNull(mid, "mid");
+        BigDecimal midRate = new BigDecimal(mid);
+        if (midRate.signum() <= 0) {
+            throw new IllegalArgumentException("mid rate must be positive: " + mid);
+        }
+        if (spreadBps < 0 || spreadBps >= BPS_PER_UNIT) {
+            throw new IllegalArgumentException(
+                    "spreadBps must be in [0, " + BPS_PER_UNIT + "), got " + spreadBps);
+        }
+        BigDecimal keptFraction = BigDecimal.ONE
+                .subtract(BigDecimal.valueOf(spreadBps).movePointLeft(4));
+        return midRate.multiply(keptFraction).setScale(RATE_SCALE, RoundingMode.HALF_EVEN).toPlainString();
+    }
+
+    /**
+     * The per-unit fee the spread is worth: {@code mid - clientRate}, as exact decimal text.
+     *
+     * <p>Deliberately a subtraction of the two rates that are actually used rather than a second,
+     * independent {@code mid * bps} calculation. {@link #applySpread} rounds the client rate to the
+     * scale the database stores, so a separately derived fee rate would not add back up to the mid
+     * rate and the FX entry's fee leg would silently absorb that discrepancy - which is the exact
+     * failure mode plans/phase-04-fx-multicurrency.md warns about, only in reverse
+     * ({@code FEE_INCOME} carrying drift rather than the pool). Subtracting guarantees
+     * {@code clientRate + spreadRate == mid} exactly, so the only thing the fee leg can be off by
+     * is the sub-unit rounding the {@code FX_PNL} leg is there to hold.
+     *
+     * @throws IllegalArgumentException if {@code clientRate} exceeds {@code mid} - a negative
+     *                                  spread would mean paying the client for the privilege
+     */
+    public static String spreadRate(String mid, String clientRate) {
+        Objects.requireNonNull(mid, "mid");
+        Objects.requireNonNull(clientRate, "clientRate");
+        BigDecimal midRate = new BigDecimal(mid);
+        BigDecimal client = new BigDecimal(clientRate);
+        if (client.compareTo(midRate) > 0) {
+            throw new IllegalArgumentException(
+                    "client rate " + clientRate + " is better than the mid rate " + mid);
+        }
+        return midRate.subtract(client).setScale(RATE_SCALE, RoundingMode.HALF_EVEN).toPlainString();
     }
 
     /**

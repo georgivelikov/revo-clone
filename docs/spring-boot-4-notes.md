@@ -585,6 +585,32 @@ Two smaller facts from the same task:
   called — the frame arrives (visible in the client's own TRACE log) and the test still sees nothing.
   Take `byte[].class` as the payload type with the default `SimpleMessageConverter` instead.
 
+## `RestClient.Builder` is auto-configured, but `spring-boot-starter-web` does not bring its module
+
+Sources: <https://docs.spring.io/spring-boot/reference/io/rest-client.html> — *"Spring Boot
+creates and pre-configures a prototype `RestClient.Builder` bean for you. It is strongly advised
+to inject it in your components and use it to create `RestClient` instances. Spring Boot is
+configuring that builder with `HttpMessageConverters` and an appropriate
+`ClientHttpRequestFactory`."* — and
+<https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-starter-web/4.1.1/spring-boot-starter-web-4.1.1.pom>,
+whose complete dependency list is `spring-boot-starter-jackson`, `spring-boot-starter-tomcat`,
+`spring-boot-http-converter` and `spring-boot-webmvc`. Verified for task 04.4, where `fx-service`
+became the first service here to call another over HTTP (quoting reserves funds synchronously, so
+that one hop cannot go through the outbox).
+
+**So the client side is its own module: `org.springframework.boot:spring-boot-restclient`**, which
+is version-managed by `spring-boot-dependencies` (declare it with no `<version>`; it resolves at
+4.1.1). `spring-boot-webmvc` in the list above is the *server* side — having `starter-web` on the
+classpath says nothing about the `RestClient` autoconfiguration being active. Without the explicit
+dependency, injecting `RestClient.Builder` fails as a plain missing bean, with nothing in the log
+connecting that to a missing module.
+
+Same pattern as `spring-boot-flyway`, `spring-boot-kafka`, `spring-boot-persistence` and
+`spring-boot-webmvc-test` above, and by now it is the default assumption rather than a surprise:
+**in Boot 4.1 every concern's autoconfiguration is its own module, and a starter only carries the
+ones its own name covers.** Resolve the artifact and check the starter's POM rather than assuming
+a starter is transitive closure over a topic.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

@@ -209,6 +209,11 @@ services:
       FX_DB_PASSWORD: fx
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      # Quoting reserves the sell amount on the caller's wallet, which is a synchronous call to the
+      # ledger - the one hop fx-service cannot make through the outbox. See LedgerReservations.
+      # ledger-service has no compose entry of its own yet (a phase 02 gap noted on task 03.12), so
+      # the full exchange flow needs it running from the IDE until that is filled in.
+      LEDGER_BASE_URL: ${LEDGER_BASE_URL:-http://ledger-service:8083}
     depends_on:
       postgres:
         condition: service_healthy
