@@ -12,6 +12,11 @@ export interface PaymentResponse {
   targetAccountId: string
   amountMinor: number
   currency: string
+  // Both null for a same-currency transfer; set together only for a cross-currency one
+  // (plans/phase-04-fx-multicurrency.md task 8) - currency/amountMinor stay the source side
+  // throughout, so these are what the recipient actually receives.
+  targetCurrency: string | null
+  targetAmountMinor: number | null
   reference: string | null
   failureReason: string | null
   ledgerEntryId: string | null

@@ -49,6 +49,10 @@ export function useCreatePayment() {
         targetAccountId: request.targetAccountId,
         amountMinor: request.amountMinor,
         currency: request.currency,
+        // Unknown until the response arrives - a client can't price a cross-currency transfer
+        // itself, so the optimistic row never claims to know the recipient's side.
+        targetCurrency: null,
+        targetAmountMinor: null,
         reference: request.reference,
         failureReason: null,
         ledgerEntryId: null,

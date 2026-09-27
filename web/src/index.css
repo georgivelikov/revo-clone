@@ -61,3 +61,20 @@ body {
 .animate-enter {
   animation: enter-row 220ms ease-out;
 }
+
+/* The Exchange screen's live-ticking rate (plans/phase-04-fx-multicurrency.md task 10):
+   "visibly moving, with a subtle flash on change." Applied via a changing `key`, the same trick
+   `.animate-enter` relies on - React remounts the element on every new tick, so the animation
+   replays every time rather than only once. */
+@keyframes flash-value {
+  from {
+    color: var(--color-accent);
+  }
+  to {
+    color: var(--color-foreground);
+  }
+}
+
+.animate-flash {
+  animation: flash-value 600ms ease-out;
+}

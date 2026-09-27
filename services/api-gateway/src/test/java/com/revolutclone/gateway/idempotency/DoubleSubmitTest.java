@@ -91,6 +91,7 @@ class DoubleSubmitTest {
         registry.add("revolut.gateway.routes.account-service-uri", downstream::uri);
         registry.add("revolut.gateway.routes.ledger-service-uri", downstream::uri);
         registry.add("revolut.gateway.routes.notification-service-uri", downstream::uri);
+        registry.add("revolut.gateway.routes.fx-service-uri", downstream::uri);
     }
 
     @Test

@@ -65,6 +65,17 @@ spring:
                     redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@userKeyResolver}"
+            - id: fx-service
+              uri: ${revolut.gateway.routes.fx-service-uri}
+              predicates:
+                - Path=/api/fx/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
             # Only the ticket endpoint and the persisted feed - never /ws itself. The WebSocket
             # handshake is a different mechanism (Origin-checked on notification-service via
             # WS_ALLOWED_ORIGINS, not HTTP CORS) and the browser opens it directly - see
@@ -95,6 +106,7 @@ revolut:
       payment-service-uri: ${PAYMENT_SERVICE_URI}
       ledger-service-uri: ${LEDGER_SERVICE_URI}
       notification-service-uri: ${NOTIFICATION_SERVICE_URI}
+      fx-service-uri: ${FX_SERVICE_URI}
     idempotency:
       # Money-moving POSTs the edge idempotency filter guards. Exact paths, not /**: the filter
       # only needs to cover requests a downstream service will actually accept, and Spring's

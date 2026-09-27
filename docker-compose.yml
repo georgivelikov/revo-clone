@@ -37,6 +37,7 @@ services:
       # handshake itself bypasses the gateway on purpose (see application.yml's route comment),
       # which is also why notification-service isn't in this depends_on list below.
       NOTIFICATION_SERVICE_URI: http://notification-service:8088
+      FX_SERVICE_URI: http://fx-service:8085
       CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
     depends_on:
       redis:

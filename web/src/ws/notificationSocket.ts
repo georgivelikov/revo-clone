@@ -3,6 +3,7 @@ import type { IMessage } from '@stomp/stompjs'
 import { fetchWebSocketTicket } from '../api/notifications'
 import { env } from '../config/env'
 import type { ClientEvent } from './clientEvent'
+import type { RateTickFrame } from './rateTick'
 
 // The literal "/user" segment is Spring's user-destination convention, not this user's id
 // (see notification-service's WebSocketConfig: setUserDestinationPrefix + convertAndSendToUser).
@@ -10,6 +11,12 @@ import type { ClientEvent } from './clientEvent'
 // remembers the mapping from this session's principal (set during the ticket handshake) to it -
 // subscribing to anything else receives nothing, silently.
 const USER_QUEUE = '/user/queue/events'
+
+// Plain broadcast, unlike USER_QUEUE: every connected client subscribes to this same
+// destination and the simple broker fans a push out to all of them, per
+// RateTickBroadcaster/WebSocketConfig (plans/phase-04-fx-multicurrency.md task 9). A rate is
+// nobody's secret, so no per-user routing is involved at all.
+const RATE_TICKS_TOPIC = '/topic/rates'
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000
 const MAX_RECONNECT_DELAY_MS = 30_000
@@ -40,7 +47,11 @@ function wsUrl(path: string, ticket: string): string {
 export class NotificationSocket {
   private readonly client: Client
 
-  constructor(getAccessToken: () => string | undefined, onEvent: (event: ClientEvent) => void) {
+  constructor(
+    getAccessToken: () => string | undefined,
+    onEvent: (event: ClientEvent) => void,
+    onRateTick?: (tick: RateTickFrame) => void,
+  ) {
     this.client = new Client({
       reconnectDelay: INITIAL_RECONNECT_DELAY_MS,
       reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
@@ -62,6 +73,11 @@ export class NotificationSocket {
         this.client.subscribe(USER_QUEUE, (message: IMessage) => {
           onEvent(JSON.parse(message.body) as ClientEvent)
         })
+        if (onRateTick) {
+          this.client.subscribe(RATE_TICKS_TOPIC, (message: IMessage) => {
+            onRateTick(JSON.parse(message.body) as RateTickFrame)
+          })
+        }
       },
     })
   }

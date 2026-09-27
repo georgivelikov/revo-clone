@@ -4,10 +4,12 @@ import type { QueryClient } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import type { PaymentResponse } from '../api/payments'
 import { recordDevEvent } from '../dev/eventLog'
+import { RATE_TICKS_QUERY_KEY } from '../hooks/useRateTicks'
 import { PAYMENTS_FEED_QUERY_KEY } from '../hooks/usePaymentsFeed'
 import { PAYMENT_COMPLETED, TRANSFER_FAILED } from './clientEvent'
 import type { ClientEvent } from './clientEvent'
 import { NotificationSocket } from './notificationSocket'
+import type { RateTickFrame } from './rateTick'
 
 function patchPaymentStatus(
   queryClient: QueryClient,
@@ -48,6 +50,16 @@ function applyClientEvent(queryClient: QueryClient, event: ClientEvent): void {
   }
 }
 
+// Task 9's live rate feed: the socket, not react-query's fetch, is the only source for this
+// data (there is no GET for "the current rate"), so a tick simply merges into the cache under
+// its own pair - see useRateTicks for why that query never fetches on its own.
+function applyRateTick(queryClient: QueryClient, tick: RateTickFrame): void {
+  queryClient.setQueryData<Record<string, RateTickFrame>>(RATE_TICKS_QUERY_KEY, (old = {}) => ({
+    ...old,
+    [tick.pair]: tick,
+  }))
+}
+
 /** Mounted once at the app root - opens the socket for the lifetime of an authenticated session. */
 export function useNotificationSocket(): void {
   const auth = useAuth()
@@ -66,14 +78,18 @@ export function useNotificationSocket(): void {
     if (!auth.isAuthenticated) {
       return
     }
-    const socket = new NotificationSocket(() => accessTokenRef.current, (event) => {
-      // The check happens at the call site, not inside recordDevEvent, so a production build's
-      // dead-code elimination can drop the dev-drawer module from the bundle entirely.
-      if (import.meta.env.DEV) {
-        recordDevEvent(event)
-      }
-      applyClientEvent(queryClient, event)
-    })
+    const socket = new NotificationSocket(
+      () => accessTokenRef.current,
+      (event) => {
+        // The check happens at the call site, not inside recordDevEvent, so a production
+        // build's dead-code elimination can drop the dev-drawer module from the bundle entirely.
+        if (import.meta.env.DEV) {
+          recordDevEvent(event)
+        }
+        applyClientEvent(queryClient, event)
+      },
+      (tick) => applyRateTick(queryClient, tick),
+    )
     socket.connect()
     return () => socket.disconnect()
   }, [auth.isAuthenticated, queryClient])

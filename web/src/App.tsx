@@ -5,6 +5,7 @@ import { usePaymentPolling } from './hooks/usePaymentPolling'
 import { AppShell } from './layout/AppShell'
 import { ActivityDetailScreen } from './screens/ActivityDetailScreen'
 import { ActivityScreen } from './screens/ActivityScreen'
+import { ExchangeScreen } from './screens/ExchangeScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { TransferScreen } from './screens/TransferScreen'
 import { useNotificationSocket } from './ws/useNotificationSocket'
@@ -26,6 +27,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/transfer" element={<TransferScreen />} />
+          <Route path="/exchange" element={<ExchangeScreen />} />
           <Route path="/activity" element={<ActivityScreen />} />
           <Route path="/activity/:paymentId" element={<ActivityDetailScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />

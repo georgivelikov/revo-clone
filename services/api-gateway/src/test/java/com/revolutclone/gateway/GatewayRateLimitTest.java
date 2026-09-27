@@ -88,6 +88,8 @@ class GatewayRateLimitTest {
                 () -> "http://127.0.0.1:" + stubDownstream.getAddress().getPort());
         registry.add("revolut.gateway.routes.notification-service-uri",
                 () -> "http://127.0.0.1:" + stubDownstream.getAddress().getPort());
+        registry.add("revolut.gateway.routes.fx-service-uri",
+                () -> "http://127.0.0.1:" + stubDownstream.getAddress().getPort());
     }
 
     @Test
