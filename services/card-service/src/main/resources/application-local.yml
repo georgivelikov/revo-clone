@@ -1,0 +1,29 @@
+# Local-dev defaults only. Never merged into application.yml - see CLAUDE.md's config-hygiene
+# rule; the tripwire checks this by filename.
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/card
+    username: card
+    password: card
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://127.0.0.1:8180/realms/revolut
+
+revolut:
+  card:
+    crypto:
+      # Fixed, publicly-known 32-byte test keys, base64-encoded - local dev only, never a real
+      # secret. A real deployment sets CARD_ENCRYPTION_KEY / CARD_PAN_HASH_KEY from a secret
+      # store; committing a real key here would be exactly the habit
+      # plans/phase-05-cards.md's PAN handling note says not to teach.
+      encryption-key: AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=
+      pan-hash-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+
+logging:
+  structured:
+    format:
+      console:
