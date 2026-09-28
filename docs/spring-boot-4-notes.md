@@ -611,6 +611,73 @@ Same pattern as `spring-boot-flyway`, `spring-boot-kafka`, `spring-boot-persiste
 ones its own name covers.** Resolve the artifact and check the starter's POM rather than assuming
 a starter is transitive closure over a topic.
 
+## Masking a value in structured JSON logging has no built-in hook - use `StructuredLoggingJsonMembersCustomizer`
+
+Task 05.11 needed to redact a PAN wherever it might appear in a structured JSON log line. Boot
+4.1's structured logging (`logging.structured.format.console: logstash`, etc.) bypasses classic
+Logback `PatternLayout` entirely once enabled - `%msg`-style conversion words are never invoked,
+because the encoder (`org.springframework.boot.logging.logback.StructuredLogEncoder`) drives a
+`StructuredLogFormatter` directly. Confirmed by decompiling `spring-boot-4.1.1.jar` with `javap`
+(`org.springframework.boot.logging.structured.StructuredLogFormatter` and
+`StructuredLoggingJsonMembersCustomizer`) rather than trusting a summarized fetch of the reference
+docs, which is worth doing again for anything this load-bearing.
+
+**`logging.structured.json.*` properties (`include`/`exclude`/`rename`/`add`) only reshape which
+fields exist - they cannot transform a field's value.** The actual extension point is
+`org.springframework.boot.logging.structured.StructuredLoggingJsonMembersCustomizer<E>` (`E` is
+`ch.qos.logback.classic.spi.ILoggingEvent` for Logback), a one-method SPI:
+
+```java
+public interface StructuredLoggingJsonMembersCustomizer<T> {
+    void customize(JsonWriter.Members<T> members);
+}
+```
+
+`JsonWriter.Members<T>.applyingValueProcessor(JsonWriter.ValueProcessor<?> processor)` runs the
+processor across *every* member of a matching runtime type, not just one named field - which is
+what this project used, since a leaked value has no single field it is guaranteed to travel
+through:
+
+```java
+members.applyingValueProcessor(JsonWriter.ValueProcessor.of(String.class, PanMasking::mask));
+```
+
+**Registration is `SpringFactoriesLoader`, not a `logging.structured.json.customizer` property**:
+a classic `META-INF/spring.factories` entry —
+
+```
+org.springframework.boot.logging.structured.StructuredLoggingJsonMembersCustomizer=\
+com.revolutclone.web.logging.PanMaskingJsonMembersCustomizer
+```
+
+— exactly the same file and mechanism `EnvironmentPostProcessor` already uses in this project
+(`common-web`'s `StructuredLoggingDefaultsEnvironmentPostProcessor`). Applies uniformly to the
+built-in common formats (`logstash`, `ecs`, `gelf`) as well as a hand-written custom
+`StructuredLogFormatter` - confirmed by testing against `logstash`, this project's own default.
+
+**Testing it requires a `StructuredLogEncoder` with a `Spring Environment` attached to the
+`LoggerContext`, or `start()` throws.** `StructuredLogEncoder.start()` reads
+`context.getObject(Environment.class.getName())` and fails loudly
+(`IllegalStateException: Unable to find Spring Environment in logger context`) if nothing put one
+there - the real `LogbackLoggingSystem` does this during application startup; a test building its
+own `LoggerContext` from scratch (rather than reusing the running application's, obtained via
+`(LoggerContext) LoggerFactory.getILoggerFactory()`) has to do it by hand:
+
+```java
+context.setMDCAdapter(new ch.qos.logback.classic.util.LogbackMDCAdapter()); // else NPE in OutputStreamAppender
+context.putObject(Environment.class.getName(), new StandardEnvironment());
+```
+
+Verified for task 05.11: `PanMaskingJsonMembersCustomizerTest` (`common-web`, a from-scratch
+`LoggerContext`) and `PanNeverLoggedTest` (`card-service`, the real running application's own
+`LoggerContext`) both exercise the actual `StructuredLogEncoder` → SPI-discovered customizer path,
+not a stand-in for it.
+
+**A module's own build must be `mvn install`ed before a downstream module's test run sees its
+changes.** `mvn -pl services/card-service test` resolves `common-web` from `~/.m2`, not from an
+uncommitted edit in the reactor - a customizer that compiles cleanly but silently never fires in a
+downstream module's test is this, not a bug in the customizer itself.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

@@ -1,2 +1,5 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
 com.revolutclone.web.logging.StructuredLoggingDefaultsEnvironmentPostProcessor
+
+org.springframework.boot.logging.structured.StructuredLoggingJsonMembersCustomizer=\
+com.revolutclone.web.logging.PanMaskingJsonMembersCustomizer
