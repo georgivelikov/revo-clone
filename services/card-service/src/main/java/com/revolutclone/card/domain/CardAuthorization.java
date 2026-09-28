@@ -235,6 +235,23 @@ public class CardAuthorization implements Persistable<UUID> {
         this.state = AuthorizationState.REVERSED;
     }
 
+    /**
+     * Seven days passed and no settlement ever arrived, so the hold has been given back (task 05.7).
+     *
+     * <p>Sets exactly what {@link #markReversed()} sets and for the same reason: an expiry is the
+     * absence of an accounting event, and {@code card_authorization_unsettled_has_no_posting} rejects
+     * a non-settled row carrying a posting id, a settled amount or a settlement timestamp. The two
+     * transitions differ only in why they happened, which is what the state itself records - and the
+     * distinction is worth keeping, because a reversal is a merchant deciding not to claim the money
+     * and an expiry is a merchant failing to.
+     */
+    public void markExpired() {
+        if (state != AuthorizationState.APPROVED) {
+            throw new IllegalStateException("cannot expire authorization " + id + " from state " + state);
+        }
+        this.state = AuthorizationState.EXPIRED;
+    }
+
     @Override
     @Transient
     public UUID getId() {

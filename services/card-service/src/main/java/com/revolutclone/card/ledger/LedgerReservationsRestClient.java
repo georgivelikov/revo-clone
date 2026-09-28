@@ -41,6 +41,7 @@ public class LedgerReservationsRestClient implements LedgerReservations {
     private static final String HOLD_PATH = "/internal/ledger/reservations";
     private static final String SETTLE_PATH = "/internal/ledger/reservations/{id}/card-settlement";
     private static final String RELEASE_PATH = "/internal/ledger/reservations/{id}/release";
+    private static final String EXPIRE_PATH = "/internal/ledger/reservations/{id}/expire";
 
     private final RestClient http;
 
@@ -156,6 +157,31 @@ public class LedgerReservationsRestClient implements LedgerReservations {
                     .toBodilessEntity();
         } catch (ResourceAccessException ex) {
             throw new LedgerUnavailableException("could not reach ledger-service to release hold "
+                    + reservationId + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public void expire(UUID reservationId) {
+        try {
+            http.post()
+                    .uri(EXPIRE_PATH, reservationId)
+                    .retrieve()
+                    .onStatus(LedgerReservationsRestClient::isUnauthenticated,
+                            (request, response) -> {
+                                throw unauthenticated("expire hold " + reservationId, response);
+                            })
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new LedgerRejectedSettlementException("ledger refused the expiry of hold "
+                                + reservationId + " (" + response.getStatusCode() + "): " + bodyOf(response));
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new LedgerUnavailableException("ledger answered " + response.getStatusCode()
+                                + " expiring hold " + reservationId + ": " + bodyOf(response), null);
+                    })
+                    .toBodilessEntity();
+        } catch (ResourceAccessException ex) {
+            throw new LedgerUnavailableException("could not reach ledger-service to expire hold "
                     + reservationId + ": " + ex.getMessage(), ex);
         }
     }

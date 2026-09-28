@@ -13,9 +13,11 @@ import java.util.UUID;
  * is no later to defer to.
  *
  * <p>{@code hold} is the authorization chain's one synchronous hop; {@link #settle} and
- * {@link #release} are the settlement consumer's (task 05.6). The seven-day expiry sweep is the
- * ledger's own scheduled job and needs nothing here - which is the point of the hold carrying its own
- * {@code expiresAt}: if this service never comes back, the funds are released without it.
+ * {@link #release} are the settlement consumer's (task 05.6); {@link #expire} is the seven-day
+ * sweep's (task 05.7). The hold still carries its own {@code expiresAt} and the ledger still sweeps
+ * on it, so the funds come back even if this service never returns - {@link #expire} is what makes
+ * that happen at the moment the authorization is concluded rather than whenever the ledger's own
+ * sweep next runs, and what lets the row and the hold reach their terminal states together.
  */
 public interface LedgerReservations {
 
@@ -63,4 +65,22 @@ public interface LedgerReservations {
      *         error
      */
     void release(UUID reservationId);
+
+    /**
+     * Expires the hold named by {@code reservationId}: the same return of funds a release performs,
+     * asked for because the seven days elapsed rather than because anyone decided anything.
+     *
+     * <p>Idempotent in the ledger on <em>both</em> terminal states that mean the money is back,
+     * {@code EXPIRED} and {@code RELEASED}, which {@link #release} is not. That matters here and not
+     * there: the hold's own {@code expires_at} is the same instant this service's sweep works from,
+     * so the ledger's scheduled sweep and this call routinely race for the same row, and either
+     * order has to end with the authorization concluded.
+     *
+     * @throws LedgerRejectedSettlementException if the ledger refused the request (a 4xx), which
+     *         includes trying to expire a hold that has already been captured - money that has moved
+     *         cannot be given back by a sweep
+     * @throws LedgerUnavailableException if the ledger could not be reached or answered with a server
+     *         error, so it is unknown whether the hold is still standing
+     */
+    void expire(UUID reservationId);
 }

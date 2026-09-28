@@ -89,4 +89,22 @@ public class ReservationController {
         reservationService.release(id);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * The hold's owner has concluded it will never be claimed - plans/phase-05-cards.md's
+     * "Expiry (7 days, no settlement): sweep releases the hold", asked for by name instead of waited
+     * for. Task 05.7.
+     *
+     * <p>Separate from {@code /release} because the two differ in what an already-concluded
+     * reservation means. A release is a decision someone made, so finding the row already
+     * {@code EXPIRED} means the decision arrived too late and is refused; an expiry is a deadline
+     * that has passed, so finding it already expired is the same outcome by another route and is
+     * answered 200. The owner's deadline and the hold's own {@code expires_at} are the same instant,
+     * so that is the common case, not a rare one.
+     */
+    @PostMapping("/{id}/expire")
+    public ResponseEntity<Void> expire(@PathVariable UUID id) {
+        reservationService.expire(id);
+        return ResponseEntity.ok().build();
+    }
 }

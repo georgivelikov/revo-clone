@@ -1,15 +1,18 @@
 package com.revolutclone.ledger.reservation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.revolutclone.ledger.domain.AccountBalance;
 import com.revolutclone.ledger.domain.AccountBalanceRepository;
+import com.revolutclone.ledger.domain.JournalEntryType;
 import com.revolutclone.ledger.domain.LedgerAccount;
 import com.revolutclone.ledger.domain.LedgerAccountRepository;
 import com.revolutclone.ledger.domain.LedgerAccountType;
 import com.revolutclone.ledger.domain.Reservation;
 import com.revolutclone.ledger.domain.ReservationRepository;
 import com.revolutclone.ledger.domain.ReservationState;
+import com.revolutclone.ledger.reservation.error.ReservationNotHeldException;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -93,6 +96,67 @@ class ReservationExpiryTest {
         assertThat(expiredCount).isZero();
         AccountBalance balance = accountBalanceRepository.findById(account).orElseThrow();
         assertThat(balance.getReservedMinor()).isEqualTo(4_000);
+    }
+
+    /**
+     * Task 05.7: the hold's owner asks for the expiry by id instead of waiting for the sweep to
+     * notice. card-service's seven-day authorization sweep is the caller - it needs the funds back at
+     * the deadline, and it needs to know they are back before it tells the holder so.
+     */
+    @Test
+    void expiringAHoldByIdReturnsTheFundsAndIsIdempotent() {
+        UUID account = openFundedWallet(10_000);
+        Reservation reservation = reservationService.hold(account, 4_000, "EUR", UUID.randomUUID(),
+                "cardauth:" + UUID.randomUUID(), Instant.now().plusSeconds(600));
+
+        reservationService.expire(reservation.getId());
+
+        AccountBalance afterExpiry = accountBalanceRepository.findById(account).orElseThrow();
+        assertThat(afterExpiry.getAvailableMinor()).isEqualTo(10_000);
+        assertThat(afterExpiry.getReservedMinor()).isZero();
+        assertThat(reservationRepository.findById(reservation.getId()).orElseThrow().getState())
+                .isEqualTo(ReservationState.EXPIRED);
+
+        // The ledger's own sweep and the owner's are due at the same instant, so one arriving after
+        // the other is the ordinary case rather than an error - and it must not credit twice.
+        reservationService.expire(reservation.getId());
+        assertThat(accountBalanceRepository.findById(account).orElseThrow().getAvailableMinor())
+                .isEqualTo(10_000);
+    }
+
+    @Test
+    void expiringAnAlreadyReleasedHoldIsANoOpRatherThanAnError() {
+        UUID account = openFundedWallet(10_000);
+        Reservation reservation = reservationService.hold(account, 4_000, "EUR", UUID.randomUUID(),
+                "cardauth:" + UUID.randomUUID(), Instant.now().plusSeconds(600));
+        reservationService.release(reservation.getId());
+
+        reservationService.expire(reservation.getId());
+
+        // RELEASED, not EXPIRED: the funds came back for a reason, and the later deadline does not
+        // rewrite it.
+        assertThat(reservationRepository.findById(reservation.getId()).orElseThrow().getState())
+                .isEqualTo(ReservationState.RELEASED);
+        assertThat(accountBalanceRepository.findById(account).orElseThrow().getAvailableMinor())
+                .isEqualTo(10_000);
+    }
+
+    @Test
+    void expiringACapturedHoldIsRefused() {
+        UUID account = openFundedWallet(10_000);
+        UUID counterparty = openFundedWallet(0);
+        Reservation reservation = reservationService.hold(account, 4_000, "EUR", UUID.randomUUID(),
+                "cardauth:" + UUID.randomUUID(), Instant.now().plusSeconds(600));
+        reservationService.capture(reservation.getId(), counterparty, 4_000,
+                JournalEntryType.CARD_SETTLEMENT, "cardauth:" + UUID.randomUUID(), UUID.randomUUID());
+
+        // The money moved. Giving it back on a deadline would credit available with no posting to
+        // account for the credit - the one state an expiry must not swallow quietly.
+        assertThatThrownBy(() -> reservationService.expire(reservation.getId()))
+                .isInstanceOf(ReservationNotHeldException.class);
+        AccountBalance afterRefusal = accountBalanceRepository.findById(account).orElseThrow();
+        assertThat(afterRefusal.getAvailableMinor()).isEqualTo(6_000);
+        assertThat(afterRefusal.getReservedMinor()).isZero();
     }
 
     private UUID openFundedWallet(long startingAvailableMinor) {

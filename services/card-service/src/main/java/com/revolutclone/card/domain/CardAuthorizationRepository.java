@@ -2,6 +2,7 @@ package com.revolutclone.card.domain;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,6 +17,17 @@ public interface CardAuthorizationRepository extends JpaRepository<CardAuthoriza
      * resend must find the decision already made rather than make it again.
      */
     Optional<CardAuthorization> findByNetworkRef(String networkRef);
+
+    /**
+     * The authorizations whose hold has stood unclaimed for the full seven days - task 05.7's sweep.
+     *
+     * <p>{@code APPROVED} is the only state with a hold left to give back: a decline never took one,
+     * and a settlement, reversal or earlier expiry already concluded it. The cutoff the caller passes
+     * is {@code now - holdTtl}, and the comparison is inclusive, because a hold created exactly one
+     * TTL ago has reached its deadline rather than being a moment short of it.
+     */
+    List<CardAuthorization> findByStateAndAuthorizedAtLessThanEqualOrderByAuthorizedAt(
+            AuthorizationState state, Instant cutoff);
 
     /**
      * How much this card has spent since {@code windowOpenedAt} - the rolling-window read behind step 5.

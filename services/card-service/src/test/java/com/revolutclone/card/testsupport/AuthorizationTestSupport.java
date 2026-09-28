@@ -55,6 +55,9 @@ import tools.jackson.databind.json.JsonMapper;
         // connection nothing is listening on.
         "spring.kafka.listener.auto-startup=false",
         "revolut.messaging.outbox.poll-delay-ms=300000",
+        // Same reason: the seven-day expiry sweep is driven explicitly by AuthExpiryTest, and a
+        // background tick landing in the middle of another test would be noise at best.
+        "revolut.card.authorization.expiry-sweep-delay-ms=300000",
         // Never called - both ports are substituted above - but they still have to bind, because
         // application.yml takes each from an environment variable with no default.
         "revolut.card.ledger.base-url=http://ledger.invalid",

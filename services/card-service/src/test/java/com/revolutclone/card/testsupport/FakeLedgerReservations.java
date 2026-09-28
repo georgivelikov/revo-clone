@@ -52,6 +52,7 @@ public class FakeLedgerReservations implements LedgerReservations {
     private final List<HoldFundsCommand> holds = new ArrayList<>();
     private final List<SettleFundsCommand> settlements = new ArrayList<>();
     private final List<UUID> releases = new ArrayList<>();
+    private final List<UUID> expiries = new ArrayList<>();
 
     /** Funds an account: {@code total} and {@code available} start out equal, as a real balance does. */
     public synchronized void fund(UUID ledgerAccountId, long amountMinor) {
@@ -81,6 +82,11 @@ public class FakeLedgerReservations implements LedgerReservations {
         return List.copyOf(releases);
     }
 
+    /** Every hold the seven-day sweep asked the ledger to expire, in order. */
+    public synchronized List<UUID> expiries() {
+        return List.copyOf(expiries);
+    }
+
     /** How much of a hold is still held. Zero once it has been captured or released. */
     public synchronized long heldMinor(UUID reservationId) {
         Hold hold = holdsById.get(reservationId);
@@ -96,6 +102,7 @@ public class FakeLedgerReservations implements LedgerReservations {
         holds.clear();
         settlements.clear();
         releases.clear();
+        expiries.clear();
     }
 
     @Override
@@ -176,6 +183,7 @@ public class FakeLedgerReservations implements LedgerReservations {
             availableMinorByAccount.merge(hold.ledgerAccountId, -excessMinor, Long::sum);
         }
         hold.settled = true;
+        hold.captured = true;
 
         SettledFunds settled = new SettledFunds(UUID.randomUUID(), capturedMinor, releasedRemainderMinor,
                 excessMinor, excessMinor > 0 ? UUID.randomUUID() : null);
@@ -201,12 +209,44 @@ public class FakeLedgerReservations implements LedgerReservations {
         hold.settled = true;
     }
 
+    /**
+     * The seven-day sweep's return of funds: the same arithmetic {@link #release} performs, and
+     * idempotent on a hold that has already been given back - the real ledger's {@code /expire} is
+     * idempotent on both {@code EXPIRED} and {@code RELEASED} precisely because its own sweep races
+     * card-service's for these rows. A captured hold is refused here as it is there: that money moved.
+     */
+    @Override
+    public synchronized void expire(UUID reservationId) {
+        Hold hold = holdsById.get(reservationId);
+        if (hold == null) {
+            throw new LedgerRejectedSettlementException("no such hold: " + reservationId);
+        }
+        if (hold.captured) {
+            throw new LedgerRejectedSettlementException("hold " + reservationId + " has been captured; "
+                    + "money that has moved cannot be given back by a sweep");
+        }
+        expiries.add(reservationId);
+        if (hold.settled) {
+            return;
+        }
+        availableMinorByAccount.merge(hold.ledgerAccountId, hold.amountMinor, Long::sum);
+        hold.settled = true;
+    }
+
     /** A hold, and whether it has reached a terminal state. Mutable because the real row is too. */
     private static final class Hold {
 
         private final UUID ledgerAccountId;
         private final long amountMinor;
+
+        /** No longer held, by any route: captured, released or expired. */
         private boolean settled;
+
+        /**
+         * Captured specifically - the one terminal state that is not "the money came back", and the
+         * one the real ledger refuses to expire. {@code settled} alone cannot tell the difference.
+         */
+        private boolean captured;
 
         private Hold(UUID ledgerAccountId, long amountMinor) {
             this.ledgerAccountId = ledgerAccountId;

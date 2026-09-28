@@ -283,6 +283,34 @@ public class ReservationService {
     }
 
     /**
+     * Expires one hold by id, for an owner that knows its reservation is never going to be claimed -
+     * card-service's seven-day authorization sweep (task 05.7) is the first, and it asks so the funds
+     * come back at the moment the authorization is concluded rather than whenever this service's own
+     * sweep next runs.
+     *
+     * <p><strong>Idempotent on every state that already means "the money is back".</strong> A
+     * reservation that is already {@code EXPIRED} or {@code RELEASED} returns quietly, because the
+     * caller asked for an outcome that has been reached - and that is not an edge case here but the
+     * ordinary one: the hold's {@code expires_at} and the owner's own expiry deadline are the same
+     * instant, so {@link #sweepExpiredReservations} and the owner regularly race for the same row. A
+     * {@code CAPTURED} one still throws: the money moved, and pretending otherwise would credit
+     * {@code available} with no posting to account for it.
+     */
+    @Transactional
+    public void expire(UUID reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+        if (reservation.getState() == ReservationState.EXPIRED
+                || reservation.getState() == ReservationState.RELEASED) {
+            return;
+        }
+        if (reservation.getState() != ReservationState.HELD) {
+            throw new ReservationNotHeldException(reservationId, reservation.getState());
+        }
+        expireHeld(reservation);
+    }
+
+    /**
      * Releases every {@code HELD} reservation past its {@code expires_at}, per plans/phase-02-
      * ledger.md's expiry-sweep row. No outbox event: the phase's {@code ### Events out} list
      * names only Held/Captured/Released, and expiry is a housekeeping transition, not something
@@ -305,12 +333,17 @@ public class ReservationService {
     public int expireDueReservations(Instant asOf) {
         List<Reservation> due = reservationRepository.findByStateAndExpiresAtBefore(ReservationState.HELD, asOf);
         for (Reservation reservation : due) {
-            AccountBalance balance = accountBalanceRepository.findById(reservation.getLedgerAccountId())
-                    .orElseThrow(() -> new IllegalStateException("ledger_account "
-                            + reservation.getLedgerAccountId() + " has no account_balance row"));
-            balance.moveFromReservedToAvailable(reservation.getAmountMinor());
-            reservation.markExpired(clock.instant());
+            expireHeld(reservation);
         }
         return due.size();
+    }
+
+    /** The transition itself, shared by the sweep and {@link #expire} so the two cannot diverge. */
+    private void expireHeld(Reservation reservation) {
+        AccountBalance balance = accountBalanceRepository.findById(reservation.getLedgerAccountId())
+                .orElseThrow(() -> new IllegalStateException("ledger_account "
+                        + reservation.getLedgerAccountId() + " has no account_balance row"));
+        balance.moveFromReservedToAvailable(reservation.getAmountMinor());
+        reservation.markExpired(clock.instant());
     }
 }
