@@ -1,6 +1,8 @@
 package com.revolutclone.card.consumer;
 
 import com.revolutclone.contracts.events.AuthorizationRequestedV1;
+import com.revolutclone.contracts.events.ReversalRequestedV1;
+import com.revolutclone.contracts.events.SettlementRequestedV1;
 import com.revolutclone.messaging.spring.EventTypeRouter;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -37,9 +39,16 @@ public class CardAuthorizationKafkaListener {
     private final EventTypeRouter router;
 
     public CardAuthorizationKafkaListener(AuthorizationRequestedEventHandler authorizationRequested,
+            SettlementRequestedEventHandler settlementRequested,
+            ReversalRequestedEventHandler reversalRequested,
             JsonMapper jsonMapper) {
         this.router = EventTypeRouter.builder(jsonMapper)
                 .register(AuthorizationRequestedV1.class, authorizationRequested)
+                // The settlement lifecycle (task 05.6) arrives on the same topic and the same key as
+                // the authorization it concludes, which is what makes it safe: one partition carries a
+                // card's whole history in order, so a settlement cannot overtake its own authorization.
+                .register(SettlementRequestedV1.class, settlementRequested)
+                .register(ReversalRequestedV1.class, reversalRequested)
                 .build();
     }
 

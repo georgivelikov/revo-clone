@@ -16,6 +16,13 @@ public final class SystemAccountRefs {
 
     public static final String FX_POOL = "system:fx-pool";
     public static final String FEE_INCOME = "system:fee-income";
+
+    /**
+     * plans/phase-05-cards.md's settlement counterparty: "the posting is {@code DEBIT user wallet /
+     * CREDIT system:card-settlement}". Seeded per currency by {@code V7__card_settlement_system_account.sql}
+     * (task 05.6) rather than by V5, which predates settlement having anything to post.
+     */
+    public static final String CARD_SETTLEMENT = "system:card-settlement";
     public static final String FX_PNL = "system:fx-pnl";
     public static final String EXTERNAL_CLEARING = "system:external-clearing";
 

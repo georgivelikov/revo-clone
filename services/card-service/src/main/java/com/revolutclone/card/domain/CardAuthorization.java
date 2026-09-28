@@ -108,6 +108,15 @@ public class CardAuthorization implements Persistable<UUID> {
     @Column(name = "ledger_entry_id")
     private UUID ledgerEntryId;
 
+    @Column(name = "settled_minor")
+    private Long settledMinor;
+
+    @Column(name = "excess_minor")
+    private Long excessMinor;
+
+    @Column(name = "excess_ledger_entry_id")
+    private UUID excessLedgerEntryId;
+
     @Column(name = "authorized_at", nullable = false)
     private Instant authorizedAt;
 
@@ -179,6 +188,51 @@ public class CardAuthorization implements Persistable<UUID> {
         return new CardAuthorization(id, cardId, networkRef, merchantName, merchantMcc, merchantCountry,
                 amountMinor, currency, billingMinor, billingCurrency, fx, AuthorizationState.DECLINED, reason,
                 null, authorizedAt);
+    }
+
+    /**
+     * The money moved (task 05.6). {@code settledMinor} is what the merchant actually took, in the
+     * billing currency, and is the number the feed shows from now on - equal to
+     * {@link #getBillingMinor()} on an exact settlement, under it on a partial, over it on a tip.
+     *
+     * <p>The state is derived here rather than passed in, because it is a statement about the numbers
+     * and there is no version of it a caller should be able to disagree with: anything short of the
+     * full hold is {@link AuthorizationState#PARTIALLY_SETTLED}, and an over-settlement is
+     * {@link AuthorizationState#SETTLED} - the authorization was settled in full and then some, which
+     * {@code excessMinor} is what records.
+     *
+     * @param excessMinor how much was taken beyond the hold; zero in the ordinary case, and never
+     *                    null once a settlement has happened - see the migration on why zero and null
+     *                    are different facts here
+     */
+    public void markSettled(long settledMinor, long excessMinor, UUID ledgerEntryId, UUID excessLedgerEntryId,
+            Instant settledAt) {
+        if (state != AuthorizationState.APPROVED) {
+            throw new IllegalStateException("cannot settle authorization " + id + " from state " + state);
+        }
+        this.settledMinor = settledMinor;
+        this.excessMinor = excessMinor;
+        this.ledgerEntryId = ledgerEntryId;
+        this.excessLedgerEntryId = excessLedgerEntryId;
+        this.settledAt = settledAt;
+        this.state = billingMinor != null && settledMinor < billingMinor
+                ? AuthorizationState.PARTIALLY_SETTLED
+                : AuthorizationState.SETTLED;
+    }
+
+    /**
+     * The merchant will not be claiming the money: the hold is released and nothing was ever posted.
+     *
+     * <p>Note what this does <em>not</em> set - no {@code ledgerEntryId}, no {@code settledMinor}, no
+     * {@code settledAt}. A reversal is the absence of an accounting event, and the database says so
+     * too: {@code card_authorization_unsettled_has_no_posting} rejects a non-settled row that carries
+     * any of them.
+     */
+    public void markReversed() {
+        if (state != AuthorizationState.APPROVED) {
+            throw new IllegalStateException("cannot reverse authorization " + id + " from state " + state);
+        }
+        this.state = AuthorizationState.REVERSED;
     }
 
     @Override
@@ -276,6 +330,23 @@ public class CardAuthorization implements Persistable<UUID> {
 
     public UUID getLedgerEntryId() {
         return ledgerEntryId;
+    }
+
+    /** What the merchant actually took, in the billing currency. Null until a settlement arrives. */
+    public Long getSettledMinor() {
+        return settledMinor;
+    }
+
+    /**
+     * How much of {@link #getSettledMinor()} went beyond the hold - the over-settlement flag.
+     * Zero on an ordinary settlement, null before one.
+     */
+    public Long getExcessMinor() {
+        return excessMinor;
+    }
+
+    public UUID getExcessLedgerEntryId() {
+        return excessLedgerEntryId;
     }
 
     public Instant getAuthorizedAt() {

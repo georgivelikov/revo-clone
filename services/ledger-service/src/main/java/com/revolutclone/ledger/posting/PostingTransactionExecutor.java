@@ -92,7 +92,7 @@ public class PostingTransactionExecutor {
         // Validate every line's account BEFORE writing anything - a rejected entry must leave
         // no trace in journal_entry/posting/account_balance.
         for (PostingLine line : command.postings()) {
-            Optional<EntryRejectionReason> rejection = validateLine(line);
+            Optional<EntryRejectionReason> rejection = validateLine(line, command.overdraftPolicy());
             if (rejection.isPresent()) {
                 return reject(command, line.ledgerAccountId(), rejection.get());
             }
@@ -141,7 +141,7 @@ public class PostingTransactionExecutor {
         }
     }
 
-    private Optional<EntryRejectionReason> validateLine(PostingLine line) {
+    private Optional<EntryRejectionReason> validateLine(PostingLine line, OverdraftPolicy overdraftPolicy) {
         LedgerAccount account = ledgerAccountRepository.findById(line.ledgerAccountId()).orElse(null);
         if (account == null) {
             return Optional.of(EntryRejectionReason.ACCOUNT_NOT_FOUND);
@@ -163,8 +163,12 @@ public class PostingTransactionExecutor {
         // 30.00 hold has available=70.00, reserved=30.00 - a genuinely separate 50.00 debit
         // must be ALLOWED (70.00 covers it), but `available - reserved` = 40.00 would wrongly
         // reject it. See ReservedFundsAreNotAvailableTest.
-        if (line.reservationId() == null && line.direction() == PostingDirection.DEBIT
-                && !account.getType().isSystemAccount()) {
+        //
+        // OverdraftPolicy.ALLOW skips the check for THIS entry only - it does not make the account
+        // overdraftable, and the next entry against it is checked again. See that enum for why
+        // phase 05's over-settlement path has to be expressible without weakening anything global.
+        if (overdraftPolicy == OverdraftPolicy.FORBID && line.reservationId() == null
+                && line.direction() == PostingDirection.DEBIT && !account.getType().isSystemAccount()) {
             AccountBalance balance = accountBalanceRepository.findById(line.ledgerAccountId())
                     .orElseThrow(() -> new IllegalStateException(
                             "ledger_account " + line.ledgerAccountId() + " has no account_balance row"));

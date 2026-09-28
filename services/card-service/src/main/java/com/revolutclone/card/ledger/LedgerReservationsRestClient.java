@@ -3,6 +3,7 @@ package com.revolutclone.card.ledger;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -38,6 +39,8 @@ import org.springframework.web.client.RestClient;
 public class LedgerReservationsRestClient implements LedgerReservations {
 
     private static final String HOLD_PATH = "/internal/ledger/reservations";
+    private static final String SETTLE_PATH = "/internal/ledger/reservations/{id}/card-settlement";
+    private static final String RELEASE_PATH = "/internal/ledger/reservations/{id}/release";
 
     private final RestClient http;
 
@@ -97,6 +100,80 @@ public class LedgerReservationsRestClient implements LedgerReservations {
             // idempotency key makes safe to retry.
             throw new LedgerUnavailableException(
                     "could not reach ledger-service to hold funds for the authorization: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public SettledFunds settle(UUID reservationId, SettleFundsCommand command) {
+        try {
+            return http.post()
+                    .uri(SETTLE_PATH, reservationId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(command)
+                    .retrieve()
+                    // Same missing service identity the hold path documents, and the same answer:
+                    // unknown rather than wrong, so the message is retried instead of a settlement
+                    // being recorded that the ledger never posted.
+                    .onStatus(LedgerReservationsRestClient::isUnauthenticated,
+                            (request, response) -> {
+                                throw unauthenticated("settle hold " + reservationId, response);
+                            })
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new LedgerRejectedSettlementException("ledger refused the settlement of "
+                                + command.settledMinor() + " minor units against hold " + reservationId
+                                + " for networkRef " + command.networkRef() + " ("
+                                + response.getStatusCode() + "): " + bodyOf(response));
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new LedgerUnavailableException("ledger answered " + response.getStatusCode()
+                                + " settling hold " + reservationId + ": " + bodyOf(response), null);
+                    })
+                    .body(SettledFunds.class);
+        } catch (ResourceAccessException ex) {
+            throw new LedgerUnavailableException("could not reach ledger-service to settle hold "
+                    + reservationId + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public void release(UUID reservationId) {
+        try {
+            http.post()
+                    .uri(RELEASE_PATH, reservationId)
+                    .retrieve()
+                    .onStatus(LedgerReservationsRestClient::isUnauthenticated,
+                            (request, response) -> {
+                                throw unauthenticated("release hold " + reservationId, response);
+                            })
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new LedgerRejectedSettlementException("ledger refused the release of hold "
+                                + reservationId + " (" + response.getStatusCode() + "): " + bodyOf(response));
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new LedgerUnavailableException("ledger answered " + response.getStatusCode()
+                                + " releasing hold " + reservationId + ": " + bodyOf(response), null);
+                    })
+                    .toBodilessEntity();
+        } catch (ResourceAccessException ex) {
+            throw new LedgerUnavailableException("could not reach ledger-service to release hold "
+                    + reservationId + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    private static boolean isUnauthenticated(HttpStatusCode status) {
+        return status.value() == HttpStatus.UNAUTHORIZED.value() || status.value() == HttpStatus.FORBIDDEN.value();
+    }
+
+    private static LedgerUnavailableException unauthenticated(String attempt, ClientHttpResponse response) {
+        return new LedgerUnavailableException("ledger refused an unauthenticated attempt to " + attempt + " ("
+                + statusOf(response) + "); card-service has no service-to-service identity yet", null);
+    }
+
+    private static String statusOf(ClientHttpResponse response) {
+        try {
+            return response.getStatusCode().toString();
+        } catch (IOException ex) {
+            return "<unreadable status: " + ex.getMessage() + ">";
         }
     }
 

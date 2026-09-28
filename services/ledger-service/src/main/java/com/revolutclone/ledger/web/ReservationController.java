@@ -2,6 +2,8 @@ package com.revolutclone.ledger.web;
 
 import com.revolutclone.ledger.domain.Reservation;
 import com.revolutclone.ledger.reservation.CaptureResult;
+import com.revolutclone.ledger.reservation.CardSettlementResult;
+import com.revolutclone.ledger.reservation.CardSettlementService;
 import com.revolutclone.ledger.reservation.ReservationService;
 import com.revolutclone.ledger.web.error.InvalidLedgerRequestException;
 import jakarta.validation.Valid;
@@ -28,9 +30,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReservationController {
 
     private final ReservationService reservationService;
+    private final CardSettlementService cardSettlementService;
 
-    public ReservationController(ReservationService reservationService) {
+    public ReservationController(ReservationService reservationService,
+            CardSettlementService cardSettlementService) {
         this.reservationService = reservationService;
+        this.cardSettlementService = cardSettlementService;
     }
 
     @PostMapping
@@ -55,6 +60,28 @@ public class ReservationController {
             throw new InvalidLedgerRequestException(ex.getMessage());
         }
         return ResponseEntity.ok(CaptureResponse.from(result));
+    }
+
+    /**
+     * plans/phase-05-cards.md's settlement cases, as one call: capture the hold (in full, or the
+     * lesser amount with the difference released) and post any excess directly. Task 05.6.
+     *
+     * <p>A route of its own rather than {@code /capture} with more fields, because it is a different
+     * operation: {@code /capture} captures at most what is held, and this one deliberately may not -
+     * an over-settlement posts beyond the hold and takes the wallet negative if it must. Keeping
+     * them apart means nothing that calls {@code /capture} can reach the overdraw path by accident.
+     */
+    @PostMapping("/{id}/card-settlement")
+    public ResponseEntity<CardSettlementResponse> settleCardAuthorization(@PathVariable UUID id,
+            @Valid @RequestBody CardSettlementRequest request) {
+        CardSettlementResult result;
+        try {
+            result = cardSettlementService.settle(id, request.settledMinor(), request.feeMinor(),
+                    request.networkRef());
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidLedgerRequestException(ex.getMessage());
+        }
+        return ResponseEntity.ok(CardSettlementResponse.from(result));
     }
 
     @PostMapping("/{id}/release")
