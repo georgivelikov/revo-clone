@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.9",
+  "current": "05.10",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 221.90608930000002,
@@ -1266,12 +1266,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/05.9-freeze-unfreeze-limits-endpoints",
-      "commit": null,
+      "commit": "9ff7a7a",
       "costUsd": 0,
-      "notes": null
+      "notes": "Card.freeze()/unfreeze() are idempotent on the state they're already in, refused on CANCELLED via the new CardStateService (409 CardCancelledException); the entity itself only throws a plain IllegalStateException, same split as CardAuthorization's markExpired/markReversed. Limits endpoints (GET/PUT/DELETE /api/cards/{cardId}/limits[/{period}]) never accept a currency from the caller - CardLimitService always resolves it from the card's own funding_account projection, matching CardLimit's own javadoc on why a limit must be denominated in the wallet's currency; an uncaught-up projection answers 503 (WalletCurrencyUnknownException), the same gap FundingWalletResolver documents for the authorization path. GATE GREEN: mvn clean verify green, tripwire clean, 514 tests (up from 503). The CANCELLED-refusal path is untested - no cancel endpoint exists yet for any test to reach that state through."
     },
     {
       "id": "05.10",
