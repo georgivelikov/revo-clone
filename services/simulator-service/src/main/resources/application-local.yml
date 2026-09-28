@@ -4,6 +4,11 @@ spring:
   kafka:
     bootstrap-servers: 127.0.0.1:9092
 
+revolut:
+  simulator:
+    card:
+      base-url: http://127.0.0.1:8086
+
 logging:
   structured:
     format:

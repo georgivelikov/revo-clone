@@ -71,6 +71,7 @@ flowchart TB
     CARD -->|"rate · P05"| FX
     FX -->|"/internal · hold+capture"| LEDG
     CARD -->|"/internal · hold+capture"| LEDG
+    SIM -->|"/internal · PAN lookup · P05"| CARD
     NOTIF -->|"WS tickets ·<br/>pub/sub fan-out P07"| REDIS
 
     KAFKA -.- KUI
@@ -85,8 +86,14 @@ flowchart TB
 
 **Kafka is drawn unwired on purpose.** It has no synchronous edge to anything — every service
 reaches it asynchronously through the outbox, and [§2](#2-event-and-topic-flow) is that
-picture. `simulator-service` is unwired here for the same reason: it only ever speaks in
-events.
+picture.
+
+**`simulator-service` has exactly one synchronous edge, and it exists only because this is not
+a real card network.** A real network already knows a card's PAN from the physical swipe; this
+one has to ask, because it owns no database of its own and cannot read card-service's
+(§1's per-service-database rule) — see `card-service`'s `NetworkPanController` javadoc (P05).
+Every other message this service sends or receives — rate ticks, authorization requests,
+settlements, reversals — still travels as an event.
 
 **Eight databases, eight non-superuser roles, no cross-reads.** Every service in the box owns
 exactly one Postgres database and never reads another's — state is shared by publishing
@@ -101,6 +108,7 @@ below is a bug against the design:
 | `payment → fx` | A cross-currency transfer needs a firm rate before the user confirms. Behind a Resilience4j circuit breaker, fallback `FX_UNAVAILABLE` |
 | `card → fx` | Foreign-currency authorization must decide in well under a second |
 | `fx → ledger`, `card → ledger` | `/internal/ledger/reservations` — hold and capture. Not routed by the gateway; service-to-service only |
+| `simulator → card` | `/internal/cards/{cardId}/pan-for-network` — the merchant network's one legitimate reason to ask for a PAN it doesn't yet have. Deliberately not behind a JWT — see `NetworkPanController`'s javadoc: this project has no service-to-service client-credentials identity yet ([Phase 07](../plans/phase-07-resilience-and-scale.md)) |
 | `identity → Keycloak` | User provisioning via the Admin API, behind `IdentityProviderPort` and a breaker |
 | `gateway → Redis` | Per-user rate limiting and the edge idempotency marker |
 | `notification → Redis` | Single-use WebSocket tickets; from P07 also the pub/sub fan-out between instances |

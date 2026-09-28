@@ -2,6 +2,7 @@ package com.revolutclone.simulator;
 
 import com.revolutclone.messaging.api.EventPublisher;
 import com.revolutclone.messaging.spring.KafkaEventPublisher;
+import com.revolutclone.simulator.card.CardSimulatorProperties;
 import com.revolutclone.simulator.fx.FxSimulatorProperties;
 import java.time.Clock;
 import org.springframework.boot.SpringApplication;
@@ -30,7 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @SpringBootApplication(excludeName = "com.revolutclone.messaging.MessagingAutoConfiguration")
 @EnableScheduling
-@EnableConfigurationProperties(FxSimulatorProperties.class)
+@EnableConfigurationProperties({FxSimulatorProperties.class, CardSimulatorProperties.class})
 public class SimulatorServiceApplication {
 
     public static void main(String[] args) {

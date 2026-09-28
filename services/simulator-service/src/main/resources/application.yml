@@ -15,6 +15,9 @@ revolut:
       # reachable in testing, narrow enough the feed still looks like a real rate on screen.
       volatility: ${FX_SIMULATOR_VOLATILITY:0.0005}
       tick-interval-ms: ${FX_SIMULATOR_TICK_INTERVAL_MS:500}
+    card:
+      # card-service's /internal/cards/{cardId}/pan-for-network - see CardNetworkPanRestClient.
+      base-url: ${CARD_BASE_URL}
 
 management:
   endpoints:

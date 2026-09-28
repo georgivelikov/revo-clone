@@ -37,6 +37,14 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <!-- RFC-7807 problem details for the spend/clock endpoints task 05.8 adds - this service's
+           first routes with real, caller-visible error cases (an unknown card, an unreachable
+           card-service). No security/JPA pulled in - see that module's own pom.xml. -->
+      <groupId>com.revolutclone</groupId>
+      <artifactId>common-web</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <!-- Only for EventPublisher/KafkaEventPublisher (see SimulatorServiceApplication) - the
            outbox, idempotent-consumer and JPA-backed pieces of this module are excluded below
            since this service owns no database. -->
@@ -73,7 +81,18 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <!-- RestClient.Builder, for CardNetworkPanRestClient. Boot 4.1 split the RestClient
+           autoconfiguration into its own module; spring-boot-starter-web carries only the server
+           side. See docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
     </dependency>
     <dependency>
       <!-- Boot 4.1 split Kafka autoconfiguration out of spring-boot-autoconfigure; spring-kafka

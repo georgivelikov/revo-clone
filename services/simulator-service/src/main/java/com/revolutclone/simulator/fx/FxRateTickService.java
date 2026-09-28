@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,6 +27,7 @@ public class FxRateTickService {
     private final RandomWalkRateGenerator generator;
     private final Clock clock;
 
+    @Autowired
     public FxRateTickService(FxSimulatorProperties properties, Clock clock) {
         this(new RandomWalkRateGenerator(new Random(), properties.volatility()), clock);
     }

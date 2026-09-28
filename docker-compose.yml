@@ -185,8 +185,12 @@ services:
     environment:
       # No database entries here - simulator-service owns no database, see docs/architecture.md.
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      # The card network's one synchronous hop, task 05.8: GET /internal/cards/{id}/pan-for-network.
+      CARD_BASE_URL: ${CARD_BASE_URL:-http://card-service:8086}
     depends_on:
       kafka:
+        condition: service_healthy
+      card-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8089 && printf 'GET /actuator/health/readiness HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
