@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.8",
+  "current": "05.9",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 221.90608930000002,
@@ -1248,12 +1248,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/05.8-simulator-service",
-      "commit": null,
+      "commit": "bd55edf",
       "costUsd": 0,
-      "notes": null
+      "notes": "Design decision made with the user up front: simulator-service owns no database and has no service-to-service auth yet (Phase 07), but /simulator/cards/spend takes a cardId and must build AuthorizationRequestedV1 carrying the real PAN so card-service can resolve it by pan_hash. Resolved by adding card-service's GET /internal/cards/{cardId}/pan-for-network, deliberately exempted from JWT in SecurityConfig (a real card network already knows the PAN from the physical swipe and never asks; this project's simulator has to, once, for the same reason it has no client-credentials identity yet). Documented in docs/architecture.md as the service's one synchronous edge. Found and fixed a latent bug along the way: CardSpendService and FxRateTickService both declare two constructors with neither @Autowired, which Spring cannot resolve - simulator-service could not have booted under a real Spring context before this task's first SpringBootTest exposed it (no prior test in that service ever loaded a full context). GATE GREEN: mvn clean verify green, tripwire clean, 503 tests (up from 480)."
     },
     {
       "id": "05.9",
