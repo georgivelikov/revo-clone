@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.6",
+  "current": "05.8",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 205.80779780000003,
+    "totalSpentUsd": 221.90608930000002,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1210,11 +1210,11 @@
         "ZeroSumAfterCardActivityTest"
       ],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 1,
       "branch": "task/05.6-settlement-consumer",
-      "commit": null,
-      "costUsd": 12.057758500000002,
+      "commit": "1dc2e7d",
+      "costUsd": 22.583180750000004,
       "notes": null
     },
     {
@@ -1230,12 +1230,12 @@
         "AuthExpiryTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
-      "attempts": 0,
+      "status": "done",
+      "attempts": 3,
       "branch": "task/05.7-ledger",
-      "commit": null,
-      "costUsd": 0,
-      "notes": null
+      "commit": "2c7b01c",
+      "costUsd": 5.572869249999999,
+      "notes": "Same false block as 03.6/03.9/04.1/05.5: the 3-attempt circuit breaker tripped on gate.ps1's check 3 (`mvn clean verify` failing to delete common-money's jar because an orphaned java.exe elsewhere held it open) and, downstream of that early build failure, check 4 (AuthExpiryTest never got to run). No java.exe was still running when this session inspected the machine, and a plain `mvn clean verify` with nothing else alive passed outright. The work on the branch was already complete and correct against the Design detail: AuthorizationExpirySweep (card-service) is the authorization-side owner of the seven-day expiry - CARD_SETTLEMENT itself was 05.6's - and calls the new ReservationService.expire(id) / POST /internal/ledger/reservations/{id}/expire, idempotent on both EXPIRED and RELEASED because the ledger's own HELD-past-expires_at sweep and this one are due at the same instant and routinely race for the same row; a CAPTURED hold is refused since money that already moved cannot be given back by a sweep. AuthExpiryTest (8 tests, the phase's named test) and 3 new ReservationExpiryTest cases were already written and correct. This session wrote no source, just verified 2c7b01c against the phase and committed it. Re-ran agent/gate.ps1 -TaskId 05.7 by hand: GATE GREEN, mvn clean verify green, tripwire clean, 480 tests (up from 469)."
     },
     {
       "id": "05.8",
