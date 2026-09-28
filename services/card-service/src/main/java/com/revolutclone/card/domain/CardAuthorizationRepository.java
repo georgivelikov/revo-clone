@@ -19,6 +19,12 @@ public interface CardAuthorizationRepository extends JpaRepository<CardAuthoriza
     Optional<CardAuthorization> findByNetworkRef(String networkRef);
 
     /**
+     * Task 05.10's per-card spend feed - "pending clearly distinct from settled." Most recent
+     * first, same ordering the {@code (card_id, authorized_at desc)} index exists to serve.
+     */
+    List<CardAuthorization> findByCardIdOrderByAuthorizedAtDesc(UUID cardId);
+
+    /**
      * The authorizations whose hold has stood unclaimed for the full seven days - task 05.7's sweep.
      *
      * <p>{@code APPROVED} is the only state with a hold left to give back: a decline never took one,

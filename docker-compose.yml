@@ -35,6 +35,7 @@ services:
       # which is also why notification-service isn't in this depends_on list below.
       NOTIFICATION_SERVICE_URI: http://notification-service:8088
       FX_SERVICE_URI: http://fx-service:8085
+      CARD_SERVICE_URI: http://card-service:8086
       CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
     depends_on:
       redis:
@@ -46,6 +47,8 @@ services:
       payment-service:
         condition: service_healthy
       ledger-service:
+        condition: service_healthy
+      card-service:
         condition: service_healthy
     healthcheck:
       # eclipse-temurin:*-jre has neither curl nor wget; bash (present) has a built-in

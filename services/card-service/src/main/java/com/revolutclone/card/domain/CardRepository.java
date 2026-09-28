@@ -1,5 +1,6 @@
 package com.revolutclone.card.domain;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +22,7 @@ public interface CardRepository extends JpaRepository<Card, UUID> {
      * card ids are real.
      */
     Optional<Card> findByIdAndUserId(UUID id, UUID userId);
+
+    /** Task 05.10's Card screen: every card this holder has issued, most recent first. */
+    List<Card> findByUserIdOrderByCreatedAtDesc(UUID userId);
 }

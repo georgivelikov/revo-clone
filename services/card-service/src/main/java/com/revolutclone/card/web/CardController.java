@@ -2,6 +2,7 @@ package com.revolutclone.card.web;
 
 import com.revolutclone.card.domain.Card;
 import com.revolutclone.card.service.CardIssuanceService;
+import com.revolutclone.card.service.CardQueryService;
 import com.revolutclone.card.service.CardRevealService;
 import com.revolutclone.card.service.CardStateService;
 import com.revolutclone.card.service.IssueCardCommand;
@@ -10,8 +11,10 @@ import com.revolutclone.security.api.CurrentUser;
 import com.revolutclone.security.api.UserPrincipal;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,12 +28,30 @@ public class CardController {
     private final CardIssuanceService issuanceService;
     private final CardRevealService revealService;
     private final CardStateService stateService;
+    private final CardQueryService queryService;
 
     public CardController(CardIssuanceService issuanceService, CardRevealService revealService,
-            CardStateService stateService) {
+            CardStateService stateService, CardQueryService queryService) {
         this.issuanceService = issuanceService;
         this.revealService = revealService;
         this.stateService = stateService;
+        this.queryService = queryService;
+    }
+
+    /** Task 05.10's Card screen: every card this holder has issued. */
+    @GetMapping
+    public ResponseEntity<List<CardResponse>> list(@CurrentUser UserPrincipal principal) {
+        List<Card> cards = queryService.listCards(UUID.fromString(principal.userId()));
+        return ResponseEntity.ok(cards.stream().map(CardResponse::from).toList());
+    }
+
+    /** Task 05.10's spend feed - "pending clearly distinct from settled." */
+    @GetMapping("/{cardId}/authorizations")
+    public ResponseEntity<List<CardAuthorizationResponse>> authorizations(
+            @CurrentUser UserPrincipal principal, @PathVariable UUID cardId) {
+
+        var authorizations = queryService.listAuthorizations(cardId, UUID.fromString(principal.userId()));
+        return ResponseEntity.ok(authorizations.stream().map(CardAuthorizationResponse::from).toList());
     }
 
     @PostMapping
