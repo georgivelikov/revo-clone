@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.10",
+  "current": "05.11",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 221.90608930000002,
@@ -1284,12 +1284,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/05.10-card-screen-reveal-step-up-freeze",
-      "commit": null,
+      "commit": "3ee6d89",
       "costUsd": 0,
-      "notes": null
+      "notes": "Verified live against the actual docker-compose stack (tasks.ps1 seed's alice.seed@revolutclone.local through the real gateway), not just build/typecheck/lint - no browser-automation tool is available in this environment, so the screen was proven correct at the API-contract level rather than visually rendered. That live check surfaced two pre-existing gaps neither introduced by nor fixable within this task's scope: (1) api-gateway had no /api/cards/** route at all since card-service's first endpoint (task 05.2) - fixed here, since without it the whole screen is unreachable through the browser; required updating four gateway tests that each stub every route's URI. (2) The real authorization flow cannot complete end-to-end in the live stack because this project has no service-to-service client-credentials identity yet - card-service's Kafka-consumer POST to ledger-service's /internal/ledger/reservations gets a genuine 401, exactly the gap LedgerReservationsRestClient's/CardFxRatesRestClient's own javadoc already name as Phase 07's. Verified the two new query endpoints (GET /api/cards, GET /api/cards/{cardId}/authorizations) against manually-inserted rows instead, then removed them. GATE GREEN: mvn clean verify green, tripwire clean, 517 tests (up from 514)."
     },
     {
       "id": "05.11",
