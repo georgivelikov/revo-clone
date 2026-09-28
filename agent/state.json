@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "05.11",
+  "current": "06.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 221.90608930000002,
@@ -1304,12 +1304,12 @@
         "PanNeverLoggedTest"
       ],
       "lastInPhase": true,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/05.11-logback-pan-masking-a-test-asserting",
-      "commit": null,
+      "commit": "c4ba6fc",
       "costUsd": 0,
-      "notes": null
+      "notes": "Boot 4.1's structured logging bypasses Logback PatternLayout entirely - there is no %-converter to add. The real extension point, confirmed by decompiling spring-boot-4.1.1.jar with javap rather than trusting a summarized doc fetch: StructuredLoggingJsonMembersCustomizer, an SPI discovered via META-INF/spring.factories (documented in docs/spring-boot-4-notes.md). PanMasking (common-web) redacts any 12-19 digit run to its last four; PanMaskingJsonMembersCustomizer applies it across every String-valued member of the JSON envelope, not only \"message\", for every service that depends on common-web - not only card-service. PanNeverLoggedTest (card-service) both proves a real authorization never logs the PAN today AND deliberately logs one through the same real pipeline to prove the masking mechanism itself would catch a future leak, not merely current discipline. Lost the most time to a sharp edge worth remembering: `mvn -pl services/card-service test` resolves common-web from ~/.m2, not an uncommitted reactor edit - the customizer compiled clean and silently never fired until common-web was `mvn install`ed first. GATE GREEN including check 7's phase verification - phase 05 (cards) is done. 526 tests (up from 517)."
     },
     {
       "id": "06.1",
