@@ -113,6 +113,30 @@ public class Card implements Persistable<UUID> {
         this.createdAt = Instant.now();
     }
 
+    /**
+     * plans/phase-05-cards.md task 9's freeze toggle. Idempotent on an already-{@code FROZEN} card -
+     * a second freeze is not an error, it is the holder confirming the state they already see - but
+     * refused on {@code CANCELLED}: see {@code DeclineReason}'s javadoc on why a cancelled card is a
+     * different fact from a frozen one, never to be papered over as "still freezable." The web-facing
+     * {@code CardCancelledException} is the caller's ({@code CardStateService}'s) job to throw, same
+     * split as {@code CardAuthorization.markExpired()} and this project's other domain guards - this
+     * is the invariant, not the HTTP mapping.
+     */
+    public void freeze() {
+        if (state == CardState.CANCELLED) {
+            throw new IllegalStateException("cannot freeze card " + id + ": it is CANCELLED");
+        }
+        this.state = CardState.FROZEN;
+    }
+
+    /** The other half of {@link #freeze()} - same idempotence, same refusal on {@code CANCELLED}. */
+    public void unfreeze() {
+        if (state == CardState.CANCELLED) {
+            throw new IllegalStateException("cannot unfreeze card " + id + ": it is CANCELLED");
+        }
+        this.state = CardState.ACTIVE;
+    }
+
     @Override
     @Transient
     public boolean isNew() {

@@ -3,6 +3,7 @@ package com.revolutclone.card.web;
 import com.revolutclone.card.domain.Card;
 import com.revolutclone.card.service.CardIssuanceService;
 import com.revolutclone.card.service.CardRevealService;
+import com.revolutclone.card.service.CardStateService;
 import com.revolutclone.card.service.IssueCardCommand;
 import com.revolutclone.card.service.RevealedCard;
 import com.revolutclone.security.api.CurrentUser;
@@ -23,10 +24,13 @@ public class CardController {
 
     private final CardIssuanceService issuanceService;
     private final CardRevealService revealService;
+    private final CardStateService stateService;
 
-    public CardController(CardIssuanceService issuanceService, CardRevealService revealService) {
+    public CardController(CardIssuanceService issuanceService, CardRevealService revealService,
+            CardStateService stateService) {
         this.issuanceService = issuanceService;
         this.revealService = revealService;
+        this.stateService = stateService;
     }
 
     @PostMapping
@@ -60,5 +64,18 @@ public class CardController {
                 cardId, UUID.fromString(principal.userId()), request.pin());
 
         return ResponseEntity.ok(RevealCardResponse.from(revealed));
+    }
+
+    /** plans/phase-05-cards.md task 9: "Freeze toggle." Idempotent - see {@code Card#freeze}. */
+    @PostMapping("/{cardId}/freeze")
+    public ResponseEntity<CardResponse> freeze(@CurrentUser UserPrincipal principal, @PathVariable UUID cardId) {
+        Card card = stateService.freeze(cardId, UUID.fromString(principal.userId()));
+        return ResponseEntity.ok(CardResponse.from(card));
+    }
+
+    @PostMapping("/{cardId}/unfreeze")
+    public ResponseEntity<CardResponse> unfreeze(@CurrentUser UserPrincipal principal, @PathVariable UUID cardId) {
+        Card card = stateService.unfreeze(cardId, UUID.fromString(principal.userId()));
+        return ResponseEntity.ok(CardResponse.from(card));
     }
 }
