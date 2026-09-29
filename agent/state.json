@@ -1425,12 +1425,12 @@
         "VaultTransferTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/06.6-vault-crud-move-in-move-out-via",
-      "commit": null,
+      "commit": "7474684",
       "costUsd": 0,
-      "notes": null
+      "notes": "Vault CRUD (create/list/get/update) added to analytics-service over the existing V3__analytics_schema.sql vault table, plus move-in/move-out via POST /api/analytics/vaults/{id}/transfer. Two new internal, synchronous, non-JWT endpoints follow card-service's NetworkPanController precedent exactly: account-service's POST /internal/accounts/vaults (AccountWriter.openVault, reusing V3__account.sql's own anticipated VAULT-with-a-real-name shape) and payment-service's POST /internal/payments (a second entry point onto the existing PaymentInitiator.initiate, taking an explicit userId instead of a JWT principal; still requires Idempotency-Key per CLAUDE.md hard rule 3; built generally, not vault-specific, so task 06.7's round-up rule can reuse it from a Kafka-consumer context with no JWT at all). analytics-service's VaultService opens the account synchronously before persisting the vault row (same order as fx-service's quote/card-service's hold); VaultTransferService picks source/target by direction and namespaces the idempotency key by vault id so it can't collide with an unrelated transfer in payment-service's own unique(initiator_user_id, idempotency_key); neither duplicates payment-service's own transfer validation. AccountsRestClient/PaymentsRestClient follow LedgerReservationsRestClient's shape (ConfigurationProperties base-url, explicit 409/4xx/5xx handling, no silent swallowing). VaultTransferTest (7 tests, the phase's named test) uses fakes for both new ports - same precedent as FakeLedgerReservations, since testcontainers-kafka cannot start on this machine - proving the plumbing builds the right InitiatePaymentCommand per direction; zero-sum itself stays payment-service's/ledger-service's own proven responsibility, per the task's explicit testing guidance. Added InternalVaultAccountControllerTest and InternalPaymentControllerTest to prove the two new endpoints work with no JWT attached. Also corrected docs/architecture.md and AnalyticsServiceApplication's own javadoc, which previously and now incorrectly claimed analytics-service makes no synchronous call to another service. GATE GREEN: mvn -q clean verify green from the repo root, tripwire clean, no localhost literals introduced."
     },
     {
       "id": "06.7",
