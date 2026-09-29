@@ -26,6 +26,16 @@ import org.hibernate.type.SqlTypes;
  * {@code UPDATE}. {@code createdAt} is set in the constructor instead of a {@code @PrePersist}
  * callback for exactly this reason - it is fixed at construction time regardless of whether the
  * eventual {@code save()} takes the {@code persist()} or {@code merge()} path.
+ *
+ * <p><strong>No round-up multiplier column, deliberately, for now.</strong> The phase's prose
+ * mentions "multiplier options (1x, 2x, 5x)" for round-ups, but its own {@code vault} table SQL
+ * (reproduced verbatim by task 06.1's scaffold migration) has no such column, and none of task
+ * 06.7's three pinned tests exercise one - {@code RoundUpTest}'s own worked example is a plain 1x
+ * round-up. Rather than add a column no test drives, this is left as an implicit 1x and the gap is
+ * documented here for whichever of 06.8 (query endpoints) or 06.9 (Vaults screen) needs it: adding
+ * a {@code roundup_multiplier smallint not null default 1} column, an update-endpoint parameter,
+ * and multiplying {@link com.revolutclone.analytics.roundup.RoundUp}'s result by it in
+ * {@link com.revolutclone.analytics.roundup.RoundUpService} is the whole of that future change.
  */
 @Entity
 @Table(name = "vault")

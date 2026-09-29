@@ -13,14 +13,29 @@ import java.util.UUID;
  * ({@code TransferHappyPathTest}, {@code ZeroSumAfterTransfersTest} and friends); this fake exists
  * only to let {@code VaultTransferTest} assert that {@code VaultTransferService} constructs the
  * right {@link InitiatePaymentCommand} for each direction - the plumbing this task actually adds.
+ *
+ * <p>{@link #failNextCallWith} (task 06.7, {@code RoundUpSkipsOnInsufficientFundsTest}) lets a
+ * test simulate the one synchronous failure this system can actually produce at the initiation
+ * boundary - a rejection or an unavailable payment-service - standing in for the asynchronous
+ * insufficient-funds outcome that, per {@code RoundUpService}'s own javadoc, has no synchronous
+ * equivalent anywhere outside ledger-service. The call is still recorded before it throws, since
+ * it represents an attempt payment-service genuinely received, not one this client refused to
+ * make.
  */
 public class FakePaymentInitiationClient implements PaymentInitiationClient {
 
     private final List<InitiatePaymentCommand> calls = new ArrayList<>();
 
+    private RuntimeException nextFailure;
+
     @Override
     public synchronized InitiatedPayment initiate(InitiatePaymentCommand command) {
         calls.add(command);
+        if (nextFailure != null) {
+            RuntimeException failure = nextFailure;
+            nextFailure = null;
+            throw failure;
+        }
         return new InitiatedPayment(UUID.randomUUID(), "PENDING");
     }
 
@@ -28,7 +43,13 @@ public class FakePaymentInitiationClient implements PaymentInitiationClient {
         return List.copyOf(calls);
     }
 
+    /** The next {@link #initiate} call throws {@code exception} instead of succeeding; one-shot. */
+    public synchronized void failNextCallWith(RuntimeException exception) {
+        this.nextFailure = exception;
+    }
+
     public synchronized void reset() {
         calls.clear();
+        nextFailure = null;
     }
 }

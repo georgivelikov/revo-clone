@@ -2,6 +2,7 @@ package com.revolutclone.analytics.consumer;
 
 import com.revolutclone.analytics.readmodel.CardAuthorizationFact;
 import com.revolutclone.analytics.readmodel.CardAuthorizationFactRepository;
+import com.revolutclone.analytics.roundup.RoundUpService;
 import com.revolutclone.contracts.EventEnvelope;
 import com.revolutclone.contracts.events.AuthorizationSettledV1;
 import com.revolutclone.messaging.api.EventHandler;
@@ -23,6 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
  * only the aggregate increment is wrapped in an {@link com.revolutclone.messaging.idempotent.IdempotentHandler}.
  * Both still run inside this method's one transaction, so a crash between them cannot record a
  * settlement fact without also recording its spend, or vice versa.
+ *
+ * <p>Task 06.7 adds a third, deliberately unguarded step after those two: {@link RoundUpService}.
+ * It is not wrapped in an {@code IdempotentHandler} the way {@code monthlySpend} is, because it
+ * does not need to be - it is idempotent by construction, via the deterministic
+ * {@code "roundup:<vaultId>:<authorizationId>"} idempotency key it hands to payment-service, the
+ * same mechanism every other money-moving call in this codebase relies on (CLAUDE.md hard rule 3).
+ * It is called last and is entirely self-guarding against its own failures (see its own javadoc),
+ * so a redelivery, or a round-up that cannot be initiated, can never affect the fact upsert or the
+ * spend aggregate above it.
  */
 @Component
 public class AuthorizationSettledEventHandler implements EventHandler<AuthorizationSettledV1> {
@@ -36,11 +46,14 @@ public class AuthorizationSettledEventHandler implements EventHandler<Authorizat
 
     private final CardAuthorizationFactRepository facts;
     private final EventHandler<AuthorizationSettledV1> monthlySpend;
+    private final RoundUpService roundUp;
 
     public AuthorizationSettledEventHandler(CardAuthorizationFactRepository facts,
-            MonthlySpendProjectionHandler monthlySpendProjection, IdempotentHandlerFactory idempotentHandlerFactory) {
+            MonthlySpendProjectionHandler monthlySpendProjection, IdempotentHandlerFactory idempotentHandlerFactory,
+            RoundUpService roundUp) {
         this.facts = facts;
         this.monthlySpend = idempotentHandlerFactory.wrap(monthlySpendProjection, MONTHLY_SPEND_CONSUMER_GROUP);
+        this.roundUp = roundUp;
     }
 
     @Override
@@ -55,5 +68,7 @@ public class AuthorizationSettledEventHandler implements EventHandler<Authorizat
         facts.save(fact);
 
         monthlySpend.handle(envelope);
+
+        roundUp.applyRoundUp(event);
     }
 }
