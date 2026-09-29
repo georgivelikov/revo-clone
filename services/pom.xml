@@ -29,6 +29,7 @@
     <module>simulator-service</module>
     <module>fx-service</module>
     <module>card-service</module>
+    <module>analytics-service</module>
   </modules>
 
   <build>

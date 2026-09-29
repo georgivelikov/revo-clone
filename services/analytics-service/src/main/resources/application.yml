@@ -1,0 +1,44 @@
+server:
+  port: ${SERVER_PORT:8087}
+
+spring:
+  application:
+    name: analytics-service
+  datasource:
+    url: ${ANALYTICS_DB_URL}
+    username: ${ANALYTICS_DB_USER}
+    password: ${ANALYTICS_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway owns the schema. Never raise this.
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/analytics
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: analytics-service
+      auto-offset-reset: earliest
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI}
+
+revolut:
+  security:
+    roles-claim: ${ROLES_CLAIM:realm_access.roles}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash
