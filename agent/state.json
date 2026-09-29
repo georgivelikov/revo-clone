@@ -1405,12 +1405,12 @@
         "ReplayDoesNotRealertTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/06.5-budgets-threshold-detection-idempotent",
-      "commit": null,
+      "commit": "5c6d2b3",
       "costUsd": 0,
-      "notes": null
+      "notes": "Budget entity/repository/service (analytics-service's first outbox producer) plus BudgetThresholdService, hooked into MonthlySpendProjectionHandler right after its own monthly_spend increment - the same transaction and processed_event guard AuthorizationSettledEventHandler already wraps that handler in. Threshold math stays integer-only (totalMinor * 100 >= limitMinor * percent; both operands are minor-unit money bounded far below Long.MAX_VALUE/100, so the multiplication cannot overflow for any realistic amount - documented in BudgetThresholdService's own javadoc rather than reached for BigDecimal). 80%/100% are independent guards so a single settlement that clears both fires both exactly once (BudgetAlertTest). alerted_at_80/alerted_at_100 are stamped with the triggering settlement's own occurredAt, never Instant.now() - the guard must be deterministic under replay. ReplayDoesNotRealertTest deliberately models the phase's real replay story rather than a single redelivered message: it wipes monthly_spend and processed_event (a projection rebuild) while leaving budget intact (user-configured data, not a projection), replays both settlements with their original eventIds via CardAuthorizationEventFixtures' explicit-eventId overload, and asserts monthly_spend comes back byte-identical while outbox stays at exactly 2 rows - proving the budget's own alerted_at_* columns, not processed_event, are the guard of last resort. Hit a real landmine doing this: ProcessedEvent.isNew() always returns true by design (so save() throws on a duplicate instead of silently upserting), but Spring Data's plain delete()/deleteAll() also consult isNew() and silently skip any entity reporting true - deleteAllInBatch() (a bulk JPQL DELETE, unaffected by isNew()) is what actually clears the table; worth a note for anyone else who hits this repository. Scope decision: RetroApplyService's category-move does NOT re-trigger threshold detection - documented as a deliberate, honest gap in that class's own javadoc (both pinned tests are silent on it, and retro-apply has no settlement event of its own to borrow an occurredAt from for the alerted_at_* stamp) rather than a guessed-at half-implementation. Budget upsert endpoint (PUT /api/analytics/budgets) mirrors 06.2's override endpoint shape; no test pins it, per the task's own scope note. GATE GREEN: mvn clean verify green (full reactor, exit code 0 verified directly rather than through a piped tail which can mask a non-zero status), analytics-service suite 25 tests (up from 23)."
     },
     {
       "id": "06.6",
