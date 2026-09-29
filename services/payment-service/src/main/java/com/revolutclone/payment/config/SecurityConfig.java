@@ -16,6 +16,9 @@ import org.springframework.security.web.SecurityFilterChain;
  * matters more here than anywhere: the authenticated subject is what task 03.3 checks the
  * source account against, so "cannot send from an account you do not own" rests on this chain
  * having actually run.
+ *
+ * <p>{@code /internal/payments} (task 06.6) is the one exception - see
+ * {@code InternalPaymentController}'s javadoc for why it is deliberately not behind a JWT.
  */
 @Configuration
 @EnableWebSecurity
@@ -32,7 +35,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**")
+                        .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**",
+                                // See InternalPaymentController's javadoc: the caller is another
+                                // backend service with no login of its own, and this project has no
+                                // service-to-service identity yet (Phase 07).
+                                "/internal/payments")
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

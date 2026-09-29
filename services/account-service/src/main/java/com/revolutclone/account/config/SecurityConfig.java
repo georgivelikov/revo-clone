@@ -14,6 +14,9 @@ import org.springframework.security.web.SecurityFilterChain;
  * in this service, unlike identity-service's {@code /register}. Every service re-validates the
  * JWT independently of the gateway's edge check; see
  * plans/phase-01-identity-account-gateway.md's {@code ### api-gateway} section.
+ *
+ * <p>{@code /internal/accounts/vaults} (task 06.6) is the one exception - see
+ * {@code InternalVaultAccountController}'s javadoc for why it is deliberately not behind a JWT.
  */
 @Configuration
 @EnableWebSecurity
@@ -29,7 +32,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**")
+                        .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**",
+                                // See InternalVaultAccountController's javadoc: the caller is another
+                                // backend service with no login of its own, and this project has no
+                                // service-to-service identity yet (Phase 07).
+                                "/internal/accounts/vaults")
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

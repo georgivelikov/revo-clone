@@ -62,6 +62,14 @@
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
     <dependency>
+      <!-- Task 06.6: vault creation opens the backing account on account-service, and vault
+           move-in/move-out initiates a transfer on payment-service - both synchronous, RestClient
+           calls. spring-boot-starter-web does not pull this autoconfiguration module in on its
+           own. See docs/spring-boot-4-notes.md. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
+    </dependency>
+    <dependency>
       <!-- Boot 4.1 splits Flyway's autoconfiguration out of spring-boot-autoconfigure; flyway-core
            alone does not activate it. See docs/spring-boot-4-notes.md. -->
       <groupId>org.springframework.boot</groupId>

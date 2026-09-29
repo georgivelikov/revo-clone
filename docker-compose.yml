@@ -302,9 +302,10 @@ services:
       start_period: 30s
 
   # This project's first pure read model (plans/phase-06-vaults-analytics.md): consumes
-  # ledger.entry.v1 and card.authorization.v1 and owns no authoritative money, so it has no
-  # synchronous dependency on any other service - only Postgres (its own projections) and
-  # Kafka (the two topics it replays).
+  # ledger.entry.v1 and card.authorization.v1 and owns no authoritative money. Task 06.6 adds its
+  # only two synchronous edges - opening a vault's backing account on account-service, and
+  # initiating a vault move-in/move-out transfer on payment-service - both internal, non-JWT
+  # endpoints, never ledger-service directly.
   analytics-service:
     build:
       context: .
@@ -319,6 +320,8 @@ services:
       ANALYTICS_DB_PASSWORD: analytics
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      ACCOUNT_BASE_URL: ${ACCOUNT_BASE_URL:-http://account-service:8082}
+      PAYMENT_BASE_URL: ${PAYMENT_BASE_URL:-http://payment-service:8084}
     depends_on:
       postgres:
         condition: service_healthy

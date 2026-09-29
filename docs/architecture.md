@@ -72,6 +72,8 @@ flowchart TB
     FX -->|"/internal · hold+capture"| LEDG
     CARD -->|"/internal · hold+capture"| LEDG
     SIM -->|"/internal · PAN lookup · P05"| CARD
+    ANL -->|"/internal · open vault account · P06"| ACCT
+    ANL -->|"/internal · initiate transfer · P06"| PAY
     NOTIF -->|"WS tickets ·<br/>pub/sub fan-out P07"| REDIS
 
     KAFKA -.- KUI
@@ -109,6 +111,8 @@ below is a bug against the design:
 | `card → fx` | Foreign-currency authorization must decide in well under a second |
 | `fx → ledger`, `card → ledger` | `/internal/ledger/reservations` — hold and capture. Not routed by the gateway; service-to-service only |
 | `simulator → card` | `/internal/cards/{cardId}/pan-for-network` — the merchant network's one legitimate reason to ask for a PAN it doesn't yet have. Deliberately not behind a JWT — see `NetworkPanController`'s javadoc: this project has no service-to-service client-credentials identity yet ([Phase 07](../plans/phase-07-resilience-and-scale.md)) |
+| `analytics → account` | `/internal/accounts/vaults` — opens a vault's backing `VAULT`-type account. `analytics-service` owns the `vault` row but never the account or the money behind it — it must never call `ledger-service` directly or post anything itself. Deliberately not behind a JWT, same reasoning as the two rows above |
+| `analytics → payment` | `/internal/payments` — initiates an ordinary transfer for vault move-in/move-out, built generally (not vault-specific) so Phase 06's round-up rule reuses the identical endpoint. Deliberately not behind a JWT, same reasoning as the two rows above |
 | `identity → Keycloak` | User provisioning via the Admin API, behind `IdentityProviderPort` and a breaker |
 | `gateway → Redis` | Per-user rate limiting and the edge idempotency marker |
 | `notification → Redis` | Single-use WebSocket tickets; from P07 also the pub/sub fan-out between instances |

@@ -27,6 +27,15 @@ spring:
 revolut:
   security:
     roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  analytics:
+    # Task 06.6: vault creation opens the backing account on account-service, and vault
+    # move-in/move-out initiates a transfer on payment-service - this service's only two
+    # synchronous edges, both internal, non-JWT endpoints. See VaultAccountOpener/
+    # PaymentInitiationClient.
+    account:
+      base-url: ${ACCOUNT_BASE_URL}
+    payment:
+      base-url: ${PAYMENT_BASE_URL}
 
 management:
   endpoints:
