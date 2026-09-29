@@ -1342,12 +1342,12 @@
         "CategorisationPriorityTest"
       ],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/06.2-mcc-category-seed-data-merchant-rules",
-      "commit": null,
+      "commit": "e2f6485",
       "costUsd": 0,
-      "notes": null
+      "notes": "V5__categorisation.sql adds the three tables CategorisationResolver consults, first match wins: mcc_category (seeded fallback, one row per ISO MCC that has a natural category - Income and Transfers deliberately have none, since a card authorization is always an outgoing spend), merchant_rule (seeded SQL-LIKE patterns, e.g. TESCO% -> Groceries), and merchant_category_override - this task's own table, not given a schema by the phase's Design detail, designed as a small (user_id, merchant_name) -> category composite-keyed table mirroring card-service's CardLimit.Key @IdClass precedent. transaction_category itself (06.1's scaffold) is populated for the first time here: TransactionCategorisationService.categoriseIfAbsent is called from AuthorizationApprovedEventHandler - the one event on card.authorization.v1 that first carries merchantName/merchantMcc - and is idempotent on redelivery by an existsById guard rather than an IdempotentHandler wrapper, matching that handler's own precedent for card_authorization_fact. Deliberately out of scope per the task boundary and left untouched: retro-apply of a changed override onto past rows (06.4), and monthly_spend/budget (06.3/06.5) - CategorisationPriorityTest's own categoriseIfAbsent test proves a later override does not retroactively change an already-assigned row. Added MerchantCategoryOverrideService + a plain PUT /api/analytics/categories/overrides endpoint as the 'way to set one' the task asks for; no UI calls it yet and no test pins its shape, per the task's own note. Ambiguity resolved: McCategory/MerchantRule are read-only from the application (Flyway seeds them) but still needed real public constructors, not just the protected JPA one, so tests could build fixtures without a migration per test case. CategorisationPriorityTest (6 cases, the phase's named test) proves user override beats merchant rule beats MCC with fictional fixtures that don't collide with the seed data, plus case-insensitive rule matching, the Other/DEFAULT fallback for both a null and an unmapped MCC, and that a later override never changes an already-assigned transaction_category row; a sixth test separately sanity-checks the real seed data (TESCO% and MCC 5812) resolves sensibly. mvn clean verify green from the repo root (all 15 Maven modules with tests, 0 failures/errors); analytics-service's own test count 6 -> 12."
     },
     {
       "id": "06.3",
