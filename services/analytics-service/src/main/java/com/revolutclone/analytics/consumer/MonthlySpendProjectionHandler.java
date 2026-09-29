@@ -1,5 +1,6 @@
 package com.revolutclone.analytics.consumer;
 
+import com.revolutclone.analytics.budget.BudgetThresholdService;
 import com.revolutclone.analytics.categorisation.Category;
 import com.revolutclone.analytics.categorisation.TransactionCategoryRepository;
 import com.revolutclone.analytics.spend.MonthlySpendRepository;
@@ -42,6 +43,13 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link AuthorizationApprovedEventHandler}). Uses {@code settledMinor}/{@code settledCurrency} -
  * the wallet-currency figure - never {@code merchantSettledMinor}/{@code currency}, which is the
  * merchant's own currency and would silently mix currencies into one bucket.
+ *
+ * <p>Task 06.5 adds a third step after the increment: {@link BudgetThresholdService} re-evaluates
+ * the bucket this settlement just changed against any budget the user has set for it, inside this
+ * same transaction (and therefore the same {@code processed_event} guard this handler is wrapped
+ * in - see {@code AuthorizationSettledEventHandler}). The retro-apply path (task 06.4,
+ * {@code RetroApplyService}) moves spend between buckets too but deliberately does not call this -
+ * see that class's own javadoc for why that is left as a documented gap rather than guessed at.
  */
 @Component
 public class MonthlySpendProjectionHandler implements EventHandler<AuthorizationSettledV1> {
@@ -50,11 +58,13 @@ public class MonthlySpendProjectionHandler implements EventHandler<Authorization
 
     private final TransactionCategoryRepository categories;
     private final MonthlySpendRepository monthlySpend;
+    private final BudgetThresholdService budgetThresholds;
 
     public MonthlySpendProjectionHandler(TransactionCategoryRepository categories,
-            MonthlySpendRepository monthlySpend) {
+            MonthlySpendRepository monthlySpend, BudgetThresholdService budgetThresholds) {
         this.categories = categories;
         this.monthlySpend = monthlySpend;
+        this.budgetThresholds = budgetThresholds;
     }
 
     @Override
@@ -74,5 +84,7 @@ public class MonthlySpendProjectionHandler implements EventHandler<Authorization
                 });
         LocalDate month = envelope.occurredAt().atZone(ZoneOffset.UTC).toLocalDate().withDayOfMonth(1);
         monthlySpend.increment(event.userId(), month, category, event.settledCurrency(), event.settledMinor());
+        budgetThresholds.checkThresholds(event.userId(), month, category, event.settledCurrency(),
+                envelope.occurredAt());
     }
 }

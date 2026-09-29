@@ -29,6 +29,22 @@ import org.springframework.transaction.annotation.Transactional;
  * every past transaction for that merchant already at the target category, and
  * {@link #retroApply} skips a row whose category already equals the new value - so a repeat call
  * touches nothing, neither {@code transaction_category} nor {@code monthly_spend}.
+ *
+ * <p><strong>Documented gap: does not re-trigger budget threshold detection.</strong> Moving a
+ * settlement's spend from one category's bucket to another can, in principle, push either bucket
+ * across an 80%/100% budget line without task 06.5's
+ * {@link com.revolutclone.analytics.budget.BudgetThresholdService} ever being asked to look - it is
+ * only invoked from {@link com.revolutclone.analytics.consumer.MonthlySpendProjectionHandler}'s own
+ * increment, not from {@link #decrement}/{@code increment} here. Task 06.5's own scope note names
+ * this trade-off explicitly and leaves it as a deliberate, honest gap rather than a guessed-at
+ * half-implementation: neither {@code BudgetAlertTest} nor {@code ReplayDoesNotRealertTest} - the
+ * two tests that task is actually on the hook for - exercise the retro-apply path, and wiring it in
+ * here would need its own decision about what timestamp to stamp {@code alerted_at_*} with (this
+ * method has no settlement event of its own to borrow an {@code occurredAt} from - only
+ * {@link com.revolutclone.analytics.readmodel.CardAuthorizationFact#getSettledAt()}, which is a
+ * projection field, not a live event) and its own test coverage, neither of which this task's scope
+ * includes. A later task can add it once retro-apply itself needs revisiting for its documented
+ * "O(transactions for that merchant), should be async" gap (the phase's "Risks & gotchas" section).
  */
 @Component
 public class RetroApplyService {

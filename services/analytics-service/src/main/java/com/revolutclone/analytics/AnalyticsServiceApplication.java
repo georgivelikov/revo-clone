@@ -1,5 +1,7 @@
 package com.revolutclone.analytics;
 
+import com.revolutclone.analytics.budget.Budget;
+import com.revolutclone.analytics.budget.BudgetRepository;
 import com.revolutclone.analytics.categorisation.McCategory;
 import com.revolutclone.analytics.categorisation.McCategoryRepository;
 import com.revolutclone.analytics.categorisation.MerchantCategoryOverride;
@@ -33,10 +35,11 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  */
 @SpringBootApplication
 @EntityScan(basePackageClasses = {LedgerEntryFact.class, CardAuthorizationFact.class, McCategory.class,
-        MerchantRule.class, MerchantCategoryOverride.class, TransactionCategory.class, MonthlySpend.class})
+        MerchantRule.class, MerchantCategoryOverride.class, TransactionCategory.class, MonthlySpend.class,
+        Budget.class})
 @EnableJpaRepositories(basePackageClasses = {LedgerEntryFactRepository.class, CardAuthorizationFactRepository.class,
         McCategoryRepository.class, MerchantRuleRepository.class, MerchantCategoryOverrideRepository.class,
-        TransactionCategoryRepository.class, MonthlySpendRepository.class})
+        TransactionCategoryRepository.class, MonthlySpendRepository.class, BudgetRepository.class})
 public class AnalyticsServiceApplication {
 
     public static void main(String[] args) {
