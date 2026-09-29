@@ -7,18 +7,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Sets (or replaces) a user's own category correction for one merchant - the highest-priority
- * layer {@link CategorisationResolver} consults. Task 06.2's scope only makes this affect
- * <em>future</em> categorisation, per the task's own boundary: it does not touch any
- * already-assigned {@link TransactionCategory} row, {@code monthly_spend}, or any other
- * aggregate. Task 06.4's retro-apply is what corrects history once an override is set here.
+ * layer {@link CategorisationResolver} consults. Also drives task 06.4's retro-apply: once the
+ * override itself is written, every past authorization for that merchant whose already-assigned
+ * category disagrees with it is corrected in the same transaction, via {@link RetroApplyService}.
  */
 @Component
 public class MerchantCategoryOverrideService {
 
     private final MerchantCategoryOverrideRepository overrides;
+    private final RetroApplyService retroApplyService;
 
-    public MerchantCategoryOverrideService(MerchantCategoryOverrideRepository overrides) {
+    public MerchantCategoryOverrideService(MerchantCategoryOverrideRepository overrides,
+            RetroApplyService retroApplyService) {
         this.overrides = overrides;
+        this.retroApplyService = retroApplyService;
     }
 
     /**
@@ -37,6 +39,9 @@ public class MerchantCategoryOverrideService {
         // a correction of the first, not a duplicate.
         overrides.findByUserIdAndMerchantNameIgnoreCase(userId, merchantName)
                 .ifPresent(overrides::delete);
-        return overrides.save(new MerchantCategoryOverride(userId, merchantName, category, Instant.now()));
+        MerchantCategoryOverride saved = overrides.save(
+                new MerchantCategoryOverride(userId, merchantName, category, Instant.now()));
+        retroApplyService.retroApply(userId, merchantName, category);
+        return saved;
     }
 }

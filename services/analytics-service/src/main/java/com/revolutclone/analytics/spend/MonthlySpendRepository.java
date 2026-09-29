@@ -41,4 +41,22 @@ public interface MonthlySpendRepository extends JpaRepository<MonthlySpend, Mont
     void increment(@Param("userId") UUID userId, @Param("month") LocalDate month,
             @Param("category") String category, @Param("currency") String currency,
             @Param("amountMinor") long amountMinor);
+
+    /**
+     * Task 06.4's retro-apply correction: undoes exactly one settlement's earlier contribution to
+     * a {@code (user, month, category, currency)} bucket, the opposite of {@link #increment} for
+     * a transaction that has just been recategorised away from that bucket. A plain {@code UPDATE},
+     * not an upsert - the bucket is expected to already exist (it was created by the very
+     * {@code increment} call this reverses), so there is nothing sensible to insert if it somehow
+     * does not.
+     */
+    @Modifying
+    @Query(value = """
+            update monthly_spend
+            set total_minor = total_minor - :amountMinor, txn_count = txn_count - 1
+            where user_id = :userId and month = :month and category = :category and currency = :currency
+            """, nativeQuery = true)
+    void decrement(@Param("userId") UUID userId, @Param("month") LocalDate month,
+            @Param("category") String category, @Param("currency") String currency,
+            @Param("amountMinor") long amountMinor);
 }

@@ -23,6 +23,9 @@ import org.springframework.data.domain.Persistable;
  * the constructor rather than generated, so without this interface Spring Data would issue a
  * {@code merge} (a select-then-insert/update) instead of a plain insert for a row
  * {@link TransactionCategorisationService} already confirmed does not exist yet.
+ *
+ * <p>{@link #retroApply(String)} is the one exception to "never updated": task 06.4's correction
+ * when a user sets an override that disagrees with a category already assigned here.
  */
 @Entity
 @Table(name = "transaction_category")
@@ -96,5 +99,19 @@ public class TransactionCategory implements Persistable<UUID> {
 
     public Instant getAssignedAt() {
         return assignedAt;
+    }
+
+    /**
+     * Task 06.4's retro-apply correction, called from {@link RetroApplyService} once per past
+     * authorization whose category disagrees with a user override just set for its merchant.
+     * {@code source} becomes {@link CategorisationSource#USER} since this always follows a user
+     * action. {@code assignedAt} is deliberately left as-is: it records when the underlying
+     * authorization was first categorised (event time), which stays true and useful history; the
+     * fact that the user corrected it later belongs to {@code merchant_category_override.updated_at},
+     * not here.
+     */
+    public void retroApply(String category) {
+        this.category = category;
+        this.source = CategorisationSource.USER;
     }
 }

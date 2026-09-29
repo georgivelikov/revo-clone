@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Task 06.2's storage-and-a-way-to-set-one for user overrides, the categorisation resolver's
- * highest-priority layer. Setting an override here only changes <em>future</em> categorisation -
- * see {@link MerchantCategoryOverrideService}'s javadoc for why retro-applying it to past
- * transactions is out of this task's scope (task 06.4). No UI calls this yet and no test pins
- * its shape, per the task's own scope note.
+ * highest-priority layer. Setting an override here affects both future categorisation and, since
+ * task 06.4, retro-applies to that merchant's past transactions and their monthly aggregates -
+ * see {@link MerchantCategoryOverrideService}'s javadoc. No UI calls this yet and no test pins its
+ * shape, per the task's own scope note.
  */
 @RestController
 @RequestMapping("/api/analytics/categories/overrides")
