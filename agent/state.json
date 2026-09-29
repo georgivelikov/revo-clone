@@ -1322,12 +1322,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/06.1-analytics-service-scaffold-flyway",
-      "commit": null,
+      "commit": "fa4ca87",
       "costUsd": 0,
-      "notes": null
+      "notes": "analytics-service is this project's first pure read model. V3 lays down the phase's whole Design-detail schema up front (vault, transaction_category, monthly_spend, budget), verbatim, following ledger-service's scaffold precedent - none of the four are written to by this task, that is 06.2-06.6. V4 adds this task's own tables (ledger_entry_fact, card_authorization_fact) that its two consumers populate. LedgerEntryKafkaListener routes only EntryPostedV1 off ledger.entry.v1 - the one event that says money actually moved. CardAuthorizationKafkaListener routes AuthorizationApprovedV1/SettledV1/ReversedV1/ExpiredV1 off card.authorization.v1 - the full lifecycle of a hold that actually happened; AuthorizationDeclinedV1 is deliberately excluded (no hold placed, and a CARD_NOT_FOUND decline has no authorization id to key a row on), as are CardIssuedV1, AuthorizationRequestedV1 (full PAN, no userId) and simulator's own SettlementRequestedV1/ReversalRequestedV1 requests. Both handlers are upserts keyed on the event's own id with no side effect a redelivery could repeat, so neither is wrapped in an IdempotentHandler (same precedent as fx-service's LedgerAccountCreatedEventHandler); neither listener implements ConsumerSeekAware either, since unlike a small reference-data mapping this service's tables are the running transaction history - a full replay from offset zero is the phase's own separate `analytics-rebuild` operation, not something a listener does unprompted. Ambiguity resolved rather than guessed: EntryPostedV1 carries only a ledger account id, not a user id, and CLAUDE.md rule 7 forbids resolving that by reading another service's database, so ledger_entry_fact stores the ledger account id as-is and leaves that mapping for whichever later task needs it. Added two test classes (EntryPostedProjectionTest, CardAuthorizationProjectionTest) though none were named for this task, since the handler logic warranted more than a smoke test. GATE GREEN: mvn clean verify green from the repo root (23 files, +1374 lines), tripwire clean."
     },
     {
       "id": "06.2",
