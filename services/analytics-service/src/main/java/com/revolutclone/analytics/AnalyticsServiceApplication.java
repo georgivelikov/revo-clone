@@ -12,6 +12,8 @@ import com.revolutclone.analytics.readmodel.CardAuthorizationFact;
 import com.revolutclone.analytics.readmodel.CardAuthorizationFactRepository;
 import com.revolutclone.analytics.readmodel.LedgerEntryFact;
 import com.revolutclone.analytics.readmodel.LedgerEntryFactRepository;
+import com.revolutclone.analytics.spend.MonthlySpend;
+import com.revolutclone.analytics.spend.MonthlySpendRepository;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
@@ -31,10 +33,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  */
 @SpringBootApplication
 @EntityScan(basePackageClasses = {LedgerEntryFact.class, CardAuthorizationFact.class, McCategory.class,
-        MerchantRule.class, MerchantCategoryOverride.class, TransactionCategory.class})
+        MerchantRule.class, MerchantCategoryOverride.class, TransactionCategory.class, MonthlySpend.class})
 @EnableJpaRepositories(basePackageClasses = {LedgerEntryFactRepository.class, CardAuthorizationFactRepository.class,
         McCategoryRepository.class, MerchantRuleRepository.class, MerchantCategoryOverrideRepository.class,
-        TransactionCategoryRepository.class})
+        TransactionCategoryRepository.class, MonthlySpendRepository.class})
 public class AnalyticsServiceApplication {
 
     public static void main(String[] args) {
