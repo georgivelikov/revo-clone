@@ -18,6 +18,20 @@ public interface MonthlySpendRepository extends JpaRepository<MonthlySpend, Mont
     List<MonthlySpend> findByUserIdAndMonthAndCategory(UUID userId, LocalDate month, String category);
 
     /**
+     * Every category/currency bucket a user has for one month - task 06.8's monthly summary. One
+     * row per category actually spent in, per currency actually spent in - never pre-summed here,
+     * so the phase's "do not silently sum across currencies" rule holds by construction.
+     */
+    List<MonthlySpend> findByUserIdAndMonth(UUID userId, LocalDate month);
+
+    /**
+     * Every bucket across a range of months - task 06.8's 6-month trend, aggregated further (by
+     * month and currency, across categories) in {@code AnalyticsQueryService} rather than here, to
+     * keep this repository's job to plain reads.
+     */
+    List<MonthlySpend> findByUserIdAndMonthBetween(UUID userId, LocalDate from, LocalDate to);
+
+    /**
      * plans/phase-06-vaults-analytics.md's own upsert, verbatim: {@code total_minor = total_minor
      * + excluded.total_minor}. A native {@code ON CONFLICT} rather than a JPA read-modify-write,
      * so two settlements landing in the same {@code (user_id, month, category, currency)} bucket

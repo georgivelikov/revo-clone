@@ -4,9 +4,9 @@ import java.util.Currency;
 
 /**
  * The round-up formula itself (task 06.7), entirely in integer minor-unit arithmetic - CLAUDE.md
- * hard rule 1 forbids {@code double}/{@code float} for money, and {@link java.math.BigDecimal} is
- * reserved for {@code common-money}'s {@code Money}/{@code FxMath} doorways only, so this class
- * uses neither.
+ * hard rule 1 forbids {@code double}/{@code float} for money, and arbitrary-precision decimal
+ * arithmetic (see {@code common-money}'s {@code Money}/{@code FxMath}) is reserved for those two
+ * doorways only, so this class uses neither.
  *
  * <p>plans/phase-06-vaults-analytics.md's own worked example: {@code spend 4.37 EUR -> round to
  * 5.00 -> transfer 0.63 EUR}. {@code fractionDigits} comes from
