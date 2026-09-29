@@ -91,6 +91,21 @@ spring:
                     redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@userKeyResolver}"
+            # Missing since analytics-service's own first endpoint (task 06.1) - every
+            # /api/analytics/** call in this phase (vault CRUD/transfer, budgets, the query
+            # endpoints) was reachable only on analytics-service's own port 8087 directly until
+            # task 06.9's Vaults screen tried it through the browser and found the gap.
+            - id: analytics-service
+              uri: ${revolut.gateway.routes.analytics-service-uri}
+              predicates:
+                - Path=/api/analytics/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${revolut.gateway.rate-limiter.replenish-rate}
+                    redis-rate-limiter.burstCapacity: ${revolut.gateway.rate-limiter.burst-capacity}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
             # Only the ticket endpoint and the persisted feed - never /ws itself. The WebSocket
             # handshake is a different mechanism (Origin-checked on notification-service via
             # WS_ALLOWED_ORIGINS, not HTTP CORS) and the browser opens it directly - see
@@ -123,6 +138,7 @@ revolut:
       notification-service-uri: ${NOTIFICATION_SERVICE_URI}
       fx-service-uri: ${FX_SERVICE_URI}
       card-service-uri: ${CARD_SERVICE_URI}
+      analytics-service-uri: ${ANALYTICS_SERVICE_URI}
     idempotency:
       # Money-moving POSTs the edge idempotency filter guards. Exact paths, not /**: the filter
       # only needs to cover requests a downstream service will actually accept, and Spring's

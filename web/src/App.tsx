@@ -9,6 +9,7 @@ import { CardScreen } from './screens/CardScreen'
 import { ExchangeScreen } from './screens/ExchangeScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { TransferScreen } from './screens/TransferScreen'
+import { VaultsScreen } from './screens/VaultsScreen'
 import { useNotificationSocket } from './ws/useNotificationSocket'
 
 // Mounted once, for the lifetime of an authenticated session, regardless of which screen is
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/transfer" element={<TransferScreen />} />
           <Route path="/exchange" element={<ExchangeScreen />} />
           <Route path="/card" element={<CardScreen />} />
+          <Route path="/vaults" element={<VaultsScreen />} />
           <Route path="/activity" element={<ActivityScreen />} />
           <Route path="/activity/:paymentId" element={<ActivityDetailScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />

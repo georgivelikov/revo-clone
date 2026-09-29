@@ -23,6 +23,7 @@ revolut:
       notification-service-uri: http://127.0.0.1:8088
       fx-service-uri: http://127.0.0.1:8085
       card-service-uri: http://127.0.0.1:8086
+      analytics-service-uri: http://127.0.0.1:8087
 
 logging:
   structured:

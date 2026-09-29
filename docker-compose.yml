@@ -36,6 +36,7 @@ services:
       NOTIFICATION_SERVICE_URI: http://notification-service:8088
       FX_SERVICE_URI: http://fx-service:8085
       CARD_SERVICE_URI: http://card-service:8086
+      ANALYTICS_SERVICE_URI: http://analytics-service:8087
       CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
     depends_on:
       redis:
@@ -49,6 +50,8 @@ services:
       ledger-service:
         condition: service_healthy
       card-service:
+        condition: service_healthy
+      analytics-service:
         condition: service_healthy
     healthcheck:
       # eclipse-temurin:*-jre has neither curl nor wget; bash (present) has a built-in

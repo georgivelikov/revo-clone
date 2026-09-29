@@ -5,6 +5,7 @@ const tabs = [
   { to: '/transfer', label: 'Transfer', icon: '⇄' },
   { to: '/exchange', label: 'Exchange', icon: '⇌' },
   { to: '/card', label: 'Card', icon: '▭' },
+  { to: '/vaults', label: 'Vaults', icon: '▣' },
   { to: '/activity', label: 'Activity', icon: '≣' },
 ]
 

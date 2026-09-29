@@ -92,6 +92,8 @@ class GatewayRateLimitTest {
                 () -> "http://127.0.0.1:" + stubDownstream.getAddress().getPort());
         registry.add("revolut.gateway.routes.card-service-uri",
                 () -> "http://127.0.0.1:" + stubDownstream.getAddress().getPort());
+        registry.add("revolut.gateway.routes.analytics-service-uri",
+                () -> "http://127.0.0.1:" + stubDownstream.getAddress().getPort());
     }
 
     @Test
