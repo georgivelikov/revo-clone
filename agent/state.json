@@ -1483,12 +1483,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/06.9-vaults-screen",
-      "commit": null,
+      "commit": "bec9864",
       "costUsd": 0,
-      "notes": null
+      "notes": "Gateway gap found and fixed first, same shape as card-service's own (task 05.2): api-gateway had no /api/analytics/** route at all, since nothing before this task ever called analytics-service through the browser. Added the route to application.yml/application-local.yml/docker-compose.yml (ANALYTICS_SERVICE_URI, port 8087) plus its depends_on/healthcheck entry, and had to add the same analytics-service-uri property to all four gateway tests that stub routes via @DynamicPropertySource (GatewayAuthTest, GatewayRateLimitTest, DoubleSubmitTest, SameKeyDifferentBodyTest) - Boot's URI property binder fails the whole context on any unresolved route placeholder, even one the test never exercises, which only surfaced once the reactor build actually ran. Frontend: web/src/api/vaults.ts (typed fetch functions mirroring VaultController/VaultTransferController's DTOs exactly), web/src/hooks/useVaults.ts (useVaults/useCreateVault/useUpdateVault/useVaultTransfer, React Query pattern from useCardLimits.ts), web/src/screens/VaultsScreen.tsx (list with an SVG progress ring toward goalMinor, create/edit form, move-in/move-out modal, round-up toggle + card picker), plus BottomTabBar.tsx/App.tsx wiring for a new /vaults tab. Progress ring balance data: GET /api/accounts/me already returns a vault's VAULT-type account exactly like a wallet (AccountWriter.openVault uses the same userId), so useAccountsWithBalances' existing ledger read-through already carries the number - no backend gap here, confirmed by reading AccountController/AccountWriter/InternalVaultAccountController rather than assuming. Multiplier gap: rendered 1x/2x/5x buttons but only 1x is enabled/wired, since Vault.java's own javadoc documents no roundup_multiplier column exists yet - a working selector would promise something the backend silently ignores. Round-ups-this-month total: left out entirely and documented in a VaultsScreen.tsx comment - no endpoint or payment/ledger tag exists to answer it honestly as of 06.8, and a reference-string heuristic would be exactly the fragile guess CLAUDE.md's working style warns against. Verified: web/`npm run build` (tsc -b + vite build) and `npm run lint` (oxlint) clean; root `mvn -q clean verify` green across the full ten-service-plus-gateway reactor after the test property fix (exit 0; the only red run was the gateway route addition before its four tests got the new property, which is expected and now fixed). No tests were pinned for this task and none were added, consistent with every other frontend-only task since 03.7."
     },
     {
       "id": "06.10",
