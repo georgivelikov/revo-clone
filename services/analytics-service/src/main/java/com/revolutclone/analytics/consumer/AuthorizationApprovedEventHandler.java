@@ -1,5 +1,6 @@
 package com.revolutclone.analytics.consumer;
 
+import com.revolutclone.analytics.categorisation.TransactionCategorisationService;
 import com.revolutclone.analytics.readmodel.CardAuthorizationFact;
 import com.revolutclone.analytics.readmodel.CardAuthorizationFactRepository;
 import com.revolutclone.contracts.EventEnvelope;
@@ -18,14 +19,23 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Not wrapped in an {@code IdempotentHandler} - same reasoning as
  * {@link EntryPostedEventHandler}: an upsert keyed on the authorization id, with no side effect
  * a redelivery could repeat.
+ *
+ * <p>Also this authorization's one and only shot at categorisation (task 06.2): this is the
+ * first (and, on the normal path, the only) event that carries {@code merchantName}/
+ * {@code merchantMcc} for it, so {@link TransactionCategorisationService#categoriseIfAbsent} is
+ * called here rather than from the settlement/reversal/expiry handlers, none of which would have
+ * anything new to categorise with.
  */
 @Component
 public class AuthorizationApprovedEventHandler implements EventHandler<AuthorizationApprovedV1> {
 
     private final CardAuthorizationFactRepository facts;
+    private final TransactionCategorisationService categorisation;
 
-    public AuthorizationApprovedEventHandler(CardAuthorizationFactRepository facts) {
+    public AuthorizationApprovedEventHandler(CardAuthorizationFactRepository facts,
+            TransactionCategorisationService categorisation) {
         this.facts = facts;
+        this.categorisation = categorisation;
     }
 
     @Override
@@ -38,5 +48,8 @@ public class AuthorizationApprovedEventHandler implements EventHandler<Authoriza
                 event.merchantName(), event.merchantMcc(), event.merchantCountry(), event.amountMinor(),
                 event.currency(), event.billingMinor(), event.billingCurrency(), envelope.occurredAt());
         facts.save(fact);
+
+        categorisation.categoriseIfAbsent(event.authorizationId(), event.userId(), event.merchantName(),
+                event.merchantMcc(), envelope.occurredAt());
     }
 }

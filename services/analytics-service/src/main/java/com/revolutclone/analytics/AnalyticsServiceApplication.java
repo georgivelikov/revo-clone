@@ -1,5 +1,13 @@
 package com.revolutclone.analytics;
 
+import com.revolutclone.analytics.categorisation.McCategory;
+import com.revolutclone.analytics.categorisation.McCategoryRepository;
+import com.revolutclone.analytics.categorisation.MerchantCategoryOverride;
+import com.revolutclone.analytics.categorisation.MerchantCategoryOverrideRepository;
+import com.revolutclone.analytics.categorisation.MerchantRule;
+import com.revolutclone.analytics.categorisation.MerchantRuleRepository;
+import com.revolutclone.analytics.categorisation.TransactionCategory;
+import com.revolutclone.analytics.categorisation.TransactionCategoryRepository;
 import com.revolutclone.analytics.readmodel.CardAuthorizationFact;
 import com.revolutclone.analytics.readmodel.CardAuthorizationFactRepository;
 import com.revolutclone.analytics.readmodel.LedgerEntryFact;
@@ -22,8 +30,11 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * project facts - see {@link com.revolutclone.analytics.consumer}.
  */
 @SpringBootApplication
-@EntityScan(basePackageClasses = {LedgerEntryFact.class, CardAuthorizationFact.class})
-@EnableJpaRepositories(basePackageClasses = {LedgerEntryFactRepository.class, CardAuthorizationFactRepository.class})
+@EntityScan(basePackageClasses = {LedgerEntryFact.class, CardAuthorizationFact.class, McCategory.class,
+        MerchantRule.class, MerchantCategoryOverride.class, TransactionCategory.class})
+@EnableJpaRepositories(basePackageClasses = {LedgerEntryFactRepository.class, CardAuthorizationFactRepository.class,
+        McCategoryRepository.class, MerchantRuleRepository.class, MerchantCategoryOverrideRepository.class,
+        TransactionCategoryRepository.class})
 public class AnalyticsServiceApplication {
 
     public static void main(String[] args) {
