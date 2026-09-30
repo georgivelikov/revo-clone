@@ -30,11 +30,17 @@ import org.springframework.util.backoff.FixedBackOff;
  *
  * <p>Deserialization failures skip the chain and go straight to the DLT - one poison message
  * must never block a partition forever. That needs the consumer's value deserializer wrapped in
- * Spring Kafka's {@code ErrorHandlingDeserializer} (a per-service {@code spring.kafka.consumer.*}
- * property, not something this shared bean can set - phase 07 task 2), which is what turns a raw
- * deserialization exception into a {@code DeserializationException} that
+ * Spring Kafka's {@code ErrorHandlingDeserializer}, which turns a raw deserialization exception
+ * into a {@code DeserializationException} that
  * {@link com.revolutclone.messaging.spring.DefaultErrorClassifier DefaultErrorClassifier}
- * classifies as fatal, same as everything else here.
+ * classifies as fatal, same as everything else here - {@code DeadLetterPublishingRecoverer}
+ * above then sends it straight to the DLT via the same {@code kafkaErrorHandler}, before a
+ * listener method is ever invoked. This is per-service {@code spring.kafka.consumer.*}
+ * configuration, not something this shared bean can set: each consuming service's
+ * {@code application.yml} sets {@code spring.kafka.consumer.value-deserializer} to
+ * {@code ErrorHandlingDeserializer} and delegates to the real deserializer (this project's
+ * consumers all take the raw event envelope as {@code String}, so the delegate is
+ * {@code StringDeserializer}) via the {@code spring.deserializer.value.delegate.class} property.
  */
 @Configuration(proxyBeanMethods = false)
 public class KafkaErrorHandlingConfig {

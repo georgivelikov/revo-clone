@@ -18,11 +18,12 @@ import tools.jackson.core.JacksonException;
  * exception is frequently a wrapper (e.g. Spring Kafka's {@code ListenerExecutionFailedException})
  * around the one that actually carries the signal.
  *
- * <p><strong>Deserialization failures never reach this class in practice</strong> - with
- * {@code ErrorHandlingDeserializer} configured (phase 07 task 2), a poison message is already
- * turned into a {@link DeserializationException} and recovered before a listener method is even
- * invoked. The check here is defence in depth for a service that has not wired that up yet, not
- * the primary mechanism.
+ * <p><strong>Deserialization failures never reach this class in practice</strong> - every
+ * consuming service configures {@code ErrorHandlingDeserializer} (see
+ * {@code spring.kafka.consumer.value-deserializer} in each service's {@code application.yml}),
+ * so a poison message is already turned into a {@link DeserializationException} and recovered
+ * before a listener method is even invoked. The check here is defence in depth for a service
+ * that has not wired that up, not the primary mechanism.
  *
  * <p>Only exception types already on this module's classpath are checked here (Spring's data
  * access hierarchy, the JDK, Kafka's own client library, Jackson 3). A service with a

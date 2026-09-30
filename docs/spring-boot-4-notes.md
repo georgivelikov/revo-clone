@@ -678,6 +678,47 @@ changes.** `mvn -pl services/card-service test` resolves `common-web` from `~/.m
 uncommitted edit in the reactor - a customizer that compiles cleanly but silently never fires in a
 downstream module's test is this, not a bug in the customizer itself.
 
+## `ErrorHandlingDeserializer` config path: `spring.kafka.consumer.value-deserializer` plus a bracketed delegate-class property
+
+Source: <https://docs.spring.io/spring-kafka/docs/current/api/org/springframework/kafka/support/serializer/ErrorHandlingDeserializer.html>
+and its constant-values page, both rendering as Spring Kafka 4.1.1 (matches this project's pinned
+`spring-kafka.version`, phase 07 task 2). `org.springframework.kafka.support.serializer.ErrorHandlingDeserializer`
+is unchanged from earlier Spring Kafka lines: it wraps a delegate deserializer, catches whatever the
+delegate throws, and returns `null` plus a `DeserializationException` stashed in a record header
+(`SerializationUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER`) instead of letting the exception escape
+`Consumer.poll()` - which is what turns a poison message into an ordinary recoverable failure
+instead of a stuck partition, since a raw `Deserializer` exception happens *inside* `poll()`,
+before any `ConsumerRecord` exists for `DefaultErrorHandler`/`DeadLetterPublishingRecoverer` to act
+on.
+
+The delegate is selected by two more properties, not a constructor argument, because Boot only
+configures a consumer via `spring.kafka.consumer.*`: `ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS`
+= `"spring.deserializer.key.delegate.class"` and `ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS`
+= `"spring.deserializer.value.delegate.class"` (confirmed literal values from the constant-values
+page). In `application.yml` this project's consumers - every `@KafkaListener` here takes the raw
+envelope as `String` (see `KafkaEventHandlerAdapter`), so the delegate is always `StringDeserializer` -
+set it as:
+
+```yaml
+spring:
+  kafka:
+    consumer:
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        "[spring.deserializer.value.delegate.class]": org.apache.kafka.common.serialization.StringDeserializer
+```
+
+The brackets are needed because `properties` binds to `Map<String, String>`: without them, a plain
+`spring.deserializer.value.delegate.class: X` line is exactly as valid YAML, and Boot's Binder does
+accept a dotted flat key into a `Map<String,String>` target either way, but the bracketed form is
+the form Spring's own Kafka documentation and every real-world Boot+Kafka example uses for a dotted
+map key, so it is the one to match rather than relying on the unbracketed form continuing to bind
+the same way as Boot's YAML-to-property flattening evolves. This is per-service `application.yml`
+configuration (7 services here: `ledger`, `payment`, `account`, `card`, `fx`, `notification`,
+`analytics` - the ones with `spring.kafka.consumer.group-id`, i.e. the ones that actually consume),
+not something `common-messaging`'s shared `KafkaErrorHandlingConfig` can set, since Boot binds one
+`ConsumerFactory` per service from that service's own `spring.kafka.consumer.*` properties.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
