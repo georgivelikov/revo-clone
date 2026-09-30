@@ -17,6 +17,19 @@ See plans/phase-00-foundations.md §Verification and §Risks & gotchas.
                                  funded - plans/phase-04-fx-multicurrency.md task 11. Needs the
                                  full stack up, not just infra: `docker compose --profile
                                  services up -d --build` alongside `tasks.ps1 up`.
+  tasks.ps1 seed --with-history  everything the plain `seed` above does, plus for each demo
+                                 user: a EUR-linked card, a ~100-authorization card-network
+                                 spend batch settled via the simulator's controllable clock, a
+                                 Groceries budget sized to cross its own 80%/100% alerts, and a
+                                 round-up vault sourced from that card - plans/phase-06-vaults-
+                                 analytics.md task 11, so the Analytics dashboard and Vaults
+                                 screen are not empty. Needs simulator-service and
+                                 analytics-service up too (both are already in the `services`
+                                 compose profile). See Invoke-SeedHistory's own comment for why
+                                 this is real transaction *volume*, landing in whatever the real
+                                 current month is, rather than literal 3-calendar-month-old
+                                 backdated timestamps - that is not something this system's
+                                 Clock-injected outbox/event pipeline can produce.
 #>
 param(
     [Parameter(Position = 0, Mandatory = $true)]
@@ -38,8 +51,9 @@ Set-StrictMode -Version Latest
 $repo    = $PSScriptRoot
 $compose = @('-f', 'docker-compose.infra.yml')
 
-$Describe = $Rest -contains '--describe'
-$Follow   = ($Rest -contains '--follow') -or ($Rest -contains '-f')
+$Describe    = $Rest -contains '--describe'
+$Follow      = ($Rest -contains '--follow') -or ($Rest -contains '-f')
+$WithHistory = $Rest -contains '--with-history'
 
 $knownDbs = @('identity', 'account', 'ledger', 'payment', 'fx', 'card', 'analytics', 'notification')
 
@@ -60,14 +74,27 @@ function Get-TopicNames {
 # token endpoint for a password-grant login (the same public "revolut-web" client the SPA
 # uses), and ledger-service directly for its funding admin endpoint, which is deliberately not
 # gateway-routed (plans/phase-02-ledger.md's ### API section) - see CLAUDE.md's port map.
-$gatewayBase   = 'http://localhost:8080'
-$ledgerBase    = 'http://localhost:8083'
-$tokenEndpoint = 'http://localhost:8180/realms/revolut/protocol/openid-connect/token'
+$gatewayBase    = 'http://localhost:8080'
+$ledgerBase     = 'http://localhost:8083'
+# Called directly, never through the gateway - simulator-service is not a JWT resource server
+# (no common-security dependency at all; see its pom.xml), the same reasoning that already
+# justifies $ledgerBase's direct-to-service call above for an endpoint the gateway never routes.
+$simulatorBase  = 'http://localhost:8089'
+$tokenEndpoint  = 'http://localhost:8180/realms/revolut/protocol/openid-connect/token'
 $seedCurrencies = @('EUR', 'GBP', 'USD', 'JPY')
 # One round number for every currency: JPY has zero minor digits, so 50000 minor units is
 # ¥50,000 - the same order of magnitude as 500.00 of the other three, not a currency
 # conversion. The phase names no specific amount, only "GBP/USD/JPY balances".
 $seedAmountMinor = 50000
+
+# --with-history (task 06.11) constants. See Invoke-SeedHistory's own comment for the reasoning
+# behind each number.
+$historyBatchCount        = 100
+$historyAdvanceDayCount   = 5
+$historyEurTopUpMinor     = 5000000   # EUR 50,000 - headroom for a 100-authorization batch
+$historyBudgetCategory    = 'Groceries'
+$historyBudgetLimitMinor  = 20000     # EUR 200 - see Invoke-SeedHistory for why this clears easily
+$historyVaultGoalMinor    = 500000    # EUR 5,000, an arbitrary but plausible savings goal
 
 function Invoke-JsonPost([string] $Uri, [hashtable] $Body, [hashtable] $Headers) {
     Invoke-RestMethod -Method Post -Uri $Uri -ContentType 'application/json' `
@@ -171,6 +198,137 @@ function Invoke-SeedUser([string] $Email, [string] $Password, [string] $FirstNam
     }
 }
 
+# Reuses whatever card this seed user already has (same idempotent-retry spirit as
+# Open-MissingWallets's 409-tolerant pattern) rather than minting a new one on every
+# `seed --with-history` re-run - card issuance itself has no natural dedup key the way wallet
+# opening does.
+function Get-OrIssueSeedCard([hashtable] $AuthHeader, [System.Guid] $AccountId) {
+    $existing = Invoke-RestMethod -Method Get -Uri "$gatewayBase/api/cards" -Headers $AuthHeader
+    $existing = @($existing)
+    if ($existing.Count -gt 0) {
+        Say "  reusing existing card $($existing[0].id)"
+        return $existing[0].id
+    }
+
+    $card = Invoke-JsonPost -Uri "$gatewayBase/api/cards" -Body @{
+        accountId = $AccountId
+        type      = 'VIRTUAL'
+        label     = 'Seed history card'
+        pin       = '1234'
+    } -Headers $AuthHeader
+    Say "  issued card $($card.id)"
+    return $card.id
+}
+
+# Polls GET /api/analytics/summary the same way Wait-ForAllWallets polls /api/accounts/me -
+# with a deadline, not a blind fixed sleep - since the settlement -> categorisation ->
+# monthly_spend chain this depends on is asynchronous (several Kafka hops: card-service's
+# settlement, then analytics-service's own consumer). A timeout here is only ever a warning:
+# the card/batch/budget/vault calls above have already succeeded regardless of whether the
+# projection has caught up by the time this function gives up.
+function Wait-ForSeedHistorySummary([hashtable] $AuthHeader, [string] $Month) {
+    $deadline = (Get-Date).AddSeconds(90)
+    while ($true) {
+        $summary = Invoke-RestMethod -Method Get -Uri "$gatewayBase/api/analytics/summary?month=$Month" -Headers $AuthHeader
+        if (@($summary.categories).Count -gt 0) {
+            Say "  analytics summary for $Month is non-empty ($(@($summary.categories).Count) categories)"
+            return
+        }
+        if ((Get-Date) -gt $deadline) {
+            Warn "  timed out waiting for a non-empty analytics summary for $Month - the settlement/categorisation consumer chain may still be catching up; the seeded card/batch/budget/vault themselves were all accepted"
+            return
+        }
+        Start-Sleep -Seconds 3
+    }
+}
+
+# task 06.11: "3 months of plausible history so the dashboard is not empty."
+#
+# IMPORTANT - why this produces one real month of volume, not three calendar months of
+# backdated data: every event this generates gets its occurredAt from an injected
+# java.time.Clock's clock.instant() - OutboxAppenderImpl for every outbox-based service, and
+# simulator-service's own CardNetworkEventPublisher for the AuthorizationRequestedV1/
+# SettlementRequestedV1 events a spend batch produces - always the real wall clock. simulator-
+# service's SimulatedClock (what /simulator/clock/advance-day moves) is a pure in-memory day
+# counter with no relationship to wall-clock time at all (see its own javadoc): it only decides
+# which of the simulator's *own* pending spends are due for a settlement batch on a given
+# advance-day call. It does not, and cannot, backdate occurredAt. So there is no supported way
+# to make this land in three genuinely different past calendar months without either changing
+# Clock-injection in two services' production code just to serve a demo, or writing directly
+# into analytics-service's tables - both explicitly out of scope for this task (see
+# agent/state.json's 06.11 notes). What this function does instead is generate three months'
+# worth of realistic transaction *volume and variety* - many merchants, many categories, a
+# meaningful batch of settled transactions - landing honestly in whatever the real current
+# month is when it runs, which is exactly enough for the donut/trend/budget/top-merchants views
+# to all have real, varied, non-trivial data to show.
+function Invoke-SeedHistory([string] $Email, [string] $Password) {
+    Say "seeding spend history for $Email..."
+    $accessToken = Get-SeedAccessToken -Email $Email -Password $Password
+    $authHeader = @{ Authorization = "Bearer $accessToken" }
+
+    $accounts = Invoke-RestMethod -Method Get -Uri "$gatewayBase/api/accounts/me" -Headers $authHeader
+    $eurAccount = @($accounts) | Where-Object { $_.currency -eq 'EUR' } | Select-Object -First 1
+    if (-not $eurAccount) { Die "$Email has no EUR wallet yet - run 'tasks.ps1 seed' (without --with-history) first" }
+
+    # The base $seedAmountMinor (EUR 500) funded above is nowhere near enough headroom for a
+    # $historyBatchCount-authorization batch once merchants like Apple Store/airlines/hotels are
+    # in the mix - fund it directly rather than starving the batch partway through and ending up
+    # with a thin, mostly-declined settled feed. Not idempotent on a re-run, same as the base
+    # funding step above (see Invoke-SeedUser's own comment) - re-running `seed --with-history`
+    # simply tops up further, which is harmless for demo data.
+    Invoke-JsonPost -Uri "$ledgerBase/internal/ledger/admin/fund/$($eurAccount.ledgerAccountId)" -Body @{
+        amountMinor = $historyEurTopUpMinor
+        currency    = 'EUR'
+    } -Headers $authHeader | Out-Null
+
+    $cardId = Get-OrIssueSeedCard -AuthHeader $authHeader -AccountId $eurAccount.id
+
+    Say "  submitting a $historyBatchCount-authorization spend batch on card $cardId..."
+    Invoke-RestMethod -Method Post -Uri "$simulatorBase/simulator/cards/spend/batch?count=$historyBatchCount" `
+        -ContentType 'application/json' -Body (@{ cardId = $cardId } | ConvertTo-Json) | Out-Null
+
+    # A batch spreads its settlement dates over currentDay+1..+3 (CardSpendService's own
+    # javadoc), so a handful of advance-day calls - not one per simulated "day" of 90 - clears
+    # the whole batch; a couple of spares cover any earlier seed runs still in flight from a
+    # prior `--with-history` invocation against the same long-lived simulator process.
+    Say '  advancing the simulator clock so the batch settles...'
+    for ($i = 0; $i -lt $historyAdvanceDayCount; $i++) {
+        Invoke-RestMethod -Method Post -Uri "$simulatorBase/simulator/clock/advance-day" | Out-Null
+    }
+
+    $monthFirst = (Get-Date -Day 1).ToString('yyyy-MM-dd')
+
+    Say "  setting a $historyBudgetCategory budget of $historyBudgetLimitMinor EUR-minor for $monthFirst..."
+    # EUR 200: comfortably below what ~1/7 of a 100-spend batch landing on the catalogue's five
+    # grocery merchants (Tesco/Lidl/Aldi/SuperValu/Carrefour, all EUR) plausibly totals, so both
+    # the 80% and 100% thresholds clear for real rather than by exact calibration.
+    Invoke-RestMethod -Method Put -Uri "$gatewayBase/api/analytics/budgets" -ContentType 'application/json' -Body (@{
+        category   = $historyBudgetCategory
+        month      = $monthFirst
+        limitMinor = $historyBudgetLimitMinor
+        currency   = 'EUR'
+    } | ConvertTo-Json) -Headers $authHeader | Out-Null
+
+    Say "  creating a round-up vault sourced from card $cardId..."
+    try {
+        Invoke-JsonPost -Uri "$gatewayBase/api/analytics/vaults" -Body @{
+            name                = 'Seed round-up vault'
+            currency            = 'EUR'
+            goalMinor           = $historyVaultGoalMinor
+            roundupEnabled      = $true
+            roundupSourceCardId = $cardId
+        } -Headers $authHeader | Out-Null
+    } catch {
+        if ((Get-HttpStatus $_) -eq 409) {
+            Say '  round-up vault already exists'
+        } else {
+            Die "creating the round-up vault for $Email failed: $($_.Exception.Message)"
+        }
+    }
+
+    Wait-ForSeedHistorySummary -AuthHeader $authHeader -Month $monthFirst
+}
+
 Push-Location $repo
 try {
     switch ($Command) {
@@ -260,13 +418,23 @@ try {
             try {
                 Invoke-SeedUser -Email 'alice.seed@revolutclone.local' -Password 'Password1!' -FirstName 'Alice' -LastName 'Seed'
                 Invoke-SeedUser -Email 'bob.seed@revolutclone.local' -Password 'Password1!' -FirstName 'Bob' -LastName 'Seed'
+
+                if ($WithHistory) {
+                    Say 'generating spend history for the Analytics dashboard/Vaults screen (--with-history)...'
+                    Invoke-SeedHistory -Email 'alice.seed@revolutclone.local' -Password 'Password1!'
+                    Invoke-SeedHistory -Email 'bob.seed@revolutclone.local' -Password 'Password1!'
+                }
             } catch {
                 if ($_.Exception -is [System.Net.Http.HttpRequestException] -or $_.Exception.Message -match 'connect') {
-                    Die "could not reach the stack - is it up? `"tasks.ps1 up`" starts infra; the application services (gateway, identity, account, ledger, fx) need `"docker compose --profile services up -d --build`" too. Underlying error: $($_.Exception.Message)"
+                    Die "could not reach the stack - is it up? `"tasks.ps1 up`" starts infra; the application services (gateway, identity, account, ledger, fx, and - for --with-history - card, simulator, analytics) need `"docker compose --profile services up -d --build`" too. Underlying error: $($_.Exception.Message)"
                 }
                 throw
             }
-            Say 'seed complete: alice.seed@revolutclone.local / bob.seed@revolutclone.local, password Password1!, each with EUR/GBP/USD/JPY wallets funded.'
+            $summaryMessage = 'seed complete: alice.seed@revolutclone.local / bob.seed@revolutclone.local, password Password1!, each with EUR/GBP/USD/JPY wallets funded.'
+            if ($WithHistory) {
+                $summaryMessage += ' Plus a card, spend history, a Groceries budget and a round-up vault for each.'
+            }
+            Say $summaryMessage
         }
     }
 }
