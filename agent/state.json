@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "07.5",
+  "current": "07.6",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 244.1782077,
+    "totalSpentUsd": 247.5305327,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1609,11 +1609,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/07.5-resilience4j-on-remaining-sync-hops",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "cd9169a",
+      "costUsd": 3.3523250000000004,
       "notes": null
     },
     {
@@ -1627,7 +1627,7 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "in_progress",
       "attempts": 0,
       "branch": "task/07.6-chaos-endpoints-behind-the-chaos",
       "commit": null,
