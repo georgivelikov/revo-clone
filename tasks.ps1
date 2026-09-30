@@ -30,10 +30,28 @@ See plans/phase-00-foundations.md §Verification and §Risks & gotchas.
                                  current month is, rather than literal 3-calendar-month-old
                                  backdated timestamps - that is not something this system's
                                  Clock-injected outbox/event pipeline can produce.
+  tasks.ps1 analytics-rebuild   plans/phase-07-resilience-and-scale.md's ### Replay, flavour 1:
+                                 stops analytics-service (a consumer-group offset reset silently
+                                 no-ops against a running member), drops and recreates its schema,
+                                 resets its Kafka consumer group to offset zero on both topics it
+                                 reads, then restarts it - Flyway re-migrates and the consumers
+                                 replay ledger.entry.v1/card.authorization.v1 from the start. The
+                                 dashboard comes back identical and nothing re-notifies. Needs the
+                                 full stack up (`docker compose -f docker-compose.infra.yml -f
+                                 docker-compose.yml --profile services up -d --build`), same as
+                                 --with-history above.
+  tasks.ps1 point-in-time <ts>  ### Replay, flavour 2: replays ledger.entry.v1 up to an ISO-8601
+                                 instant (e.g. 2026-09-23T14:00:00Z) into ledger-service's
+                                 point_in_time_snapshot table and prints every account's balance as
+                                 of that moment - "what was every balance last Tuesday at 14:00?",
+                                 the thing a mutable-balance design cannot answer. Read-only: a
+                                 throwaway consumer group, never the real one. Needs a registered
+                                 seed user (`tasks.ps1 seed`) for its bearer token, same as the
+                                 funding calls `seed` itself makes against ledger-service.
 #>
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [ValidateSet('up', 'down', 'reset', 'logs', 'psql', 'topics', 'seed')]
+    [ValidateSet('up', 'down', 'reset', 'logs', 'psql', 'topics', 'seed', 'analytics-rebuild', 'point-in-time')]
     [string] $Command,
 
     [Parameter(Position = 1)]
@@ -50,6 +68,10 @@ Set-StrictMode -Version Latest
 
 $repo    = $PSScriptRoot
 $compose = @('-f', 'docker-compose.infra.yml')
+# analytics-rebuild needs to stop/start analytics-service itself, which only docker-compose.yml's
+# `services` profile defines - see that file's own header comment on why both -f flags have to be
+# passed together (one compose project, one shared network) rather than as two invocations.
+$composeServices = @('-f', 'docker-compose.infra.yml', '-f', 'docker-compose.yml', '--profile', 'services')
 
 $Describe    = $Rest -contains '--describe'
 $Follow      = ($Rest -contains '--follow') -or ($Rest -contains '-f')
@@ -329,6 +351,97 @@ function Invoke-SeedHistory([string] $Email, [string] $Password) {
     Wait-ForSeedHistorySummary -AuthHeader $authHeader -Month $monthFirst
 }
 
+# task 07.7 (plans/phase-07-resilience-and-scale.md's ### Replay). analytics-service's own two
+# consumer topics - see its LedgerEntryKafkaListener/CardAuthorizationKafkaListener.
+$analyticsGroupId = 'analytics-service'
+$analyticsTopics  = @('ledger.entry.v1', 'card.authorization.v1')
+
+function Wait-ForContainerHealthy([string[]] $Compose, [string] $Service, [int] $TimeoutSeconds = 180) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ($true) {
+        $cid = (& docker compose @Compose ps -q $Service | Select-Object -First 1)
+        if ($cid) {
+            $health = (& docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' $cid).Trim()
+            if ($health -eq 'healthy' -or $health -eq 'no-healthcheck') { return }
+        }
+        if ((Get-Date) -gt $deadline) { Die "timed out waiting for $Service to report healthy" }
+        Start-Sleep -Seconds 2
+    }
+}
+
+# plans/phase-07-resilience-and-scale.md's ### Replay, flavour 1 ("projection rebuild"): "drop
+# analytics-service's database, reset its consumer group to offset 0, replay. Must produce
+# identical aggregates and zero notifications." The schema is dropped and recreated rather than
+# the whole database: `analytics`, like every role in infra/postgres/init-databases.sql, only
+# has LOGIN rights on its own already-connected database (the same no-superuser constraint
+# managed Postgres imposes for real), and under Postgres 15+'s pg_database_owner default a
+# database-owning role already owns its own `public` schema outright, so this needs no extra
+# GRANT. Flyway re-migrates that empty schema back to V3-V5 on the service's next startup - the
+# same path a brand-new environment's first boot takes - which is also why this is a schema
+# reset and never ad-hoc CREATE TABLE anywhere in this project (CLAUDE.md hard rule 8, "Flyway
+# owns all schema").
+#
+# Stops the service first, not merely for a clean schema drop: plans/phase-07-resilience-and-
+# scale.md's own Risks & gotchas warns "consumer-group offset reset requires the group to be
+# empty... or the reset silently no-ops."
+function Invoke-AnalyticsRebuild {
+    Say 'stopping analytics-service (a consumer-group offset reset silently no-ops against a running member)...'
+    & docker compose @composeServices stop analytics-service
+    if ($LASTEXITCODE -ne 0) { Die 'stopping analytics-service failed' }
+
+    Say 'dropping and recreating the analytics schema...'
+    & docker compose @compose exec -T postgres psql -U analytics -d analytics -v ON_ERROR_STOP=1 `
+        -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+    if ($LASTEXITCODE -ne 0) { Die 'resetting the analytics schema failed' }
+
+    Say "resetting the $analyticsGroupId consumer group to offset zero on $($analyticsTopics -join ', ')..."
+    $topicArgs = @()
+    foreach ($topic in $analyticsTopics) { $topicArgs += @('--topic', $topic) }
+    & docker compose @compose exec -T kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server 127.0.0.1:9092 `
+        --group $analyticsGroupId --reset-offsets --to-earliest @topicArgs --execute
+    if ($LASTEXITCODE -ne 0) { Die 'resetting the analytics-service consumer group offsets failed' }
+
+    Say 'restarting analytics-service - Flyway re-migrates the schema, then the consumers replay from offset zero...'
+    & docker compose @composeServices up -d analytics-service
+    if ($LASTEXITCODE -ne 0) { Die 'restarting analytics-service failed' }
+
+    Wait-ForContainerHealthy -Compose $composeServices -Service 'analytics-service'
+    Say 'analytics-service is healthy again. Check the dashboard for identical aggregates, and confirm no new notification arrived.'
+}
+
+# plans/phase-07-resilience-and-scale.md's ### Replay, flavour 2 ("point-in-time query"):
+# "what was every balance last Tuesday at 14:00?" - read-only, and unlike analytics-rebuild
+# above never touches a real consumer group (PointInTimeService reads with its own throwaway
+# group id, same reasoning as common-messaging's DltAdminService). Needs a bearer token the same
+# way the funding calls inside Invoke-SeedUser do: this project has no separate "operator"
+# identity yet, so it reuses whichever seed user is already registered.
+function Invoke-PointInTimeQuery([string] $Timestamp) {
+    if (-not $Timestamp) { Die 'usage: tasks.ps1 point-in-time <ISO-8601 instant, e.g. 2026-09-23T14:00:00Z>' }
+    try {
+        $asOf = ([DateTimeOffset]::Parse($Timestamp)).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
+    } catch {
+        Die "'$Timestamp' is not a parseable timestamp: $($_.Exception.Message)"
+    }
+
+    try {
+        $accessToken = Get-SeedAccessToken -Email 'alice.seed@revolutclone.local' -Password 'Password1!'
+    } catch {
+        Die "could not log in as the seed user for a bearer token - run `"tasks.ps1 seed`" first. Underlying error: $($_.Exception.Message)"
+    }
+    $authHeader = @{ Authorization = "Bearer $accessToken" }
+
+    Say "replaying ledger.entry.v1 up to $asOf..."
+    $uri = "$ledgerBase/internal/ledger/admin/point-in-time?asOf=$([uri]::EscapeDataString($asOf))"
+    $result = Invoke-RestMethod -Method Get -Uri $uri -Headers $authHeader
+
+    if (@($result.balances).Count -eq 0) {
+        Say "no ledger.entry.v1 activity on or before $asOf."
+        return
+    }
+    $result.balances | Select-Object ledgerAccountId, currency, balanceAfterMinor, occurredAt |
+        Format-Table -AutoSize | Out-String | Write-Host
+}
+
 Push-Location $repo
 try {
     switch ($Command) {
@@ -435,6 +548,14 @@ try {
                 $summaryMessage += ' Plus a card, spend history, a Groceries budget and a round-up vault for each.'
             }
             Say $summaryMessage
+        }
+
+        'analytics-rebuild' {
+            Invoke-AnalyticsRebuild
+        }
+
+        'point-in-time' {
+            Invoke-PointInTimeQuery -Timestamp $Target
         }
     }
 }
