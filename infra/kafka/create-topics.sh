@@ -41,5 +41,29 @@ create fx.rate.tick.v1         12 delete  3600000       # key: pair
 create fx.quote.v1             12 delete  2592000000   # key: quoteId
 create card.authorization.v1   12 delete  -1           # key: cardId
 
+# Retry-topic chain + DLT (plans/phase-07-resilience-and-scale.md §Retry topics and the dead
+# letter queue). 3 partitions, not 12 - ordering no longer matters once a message is in the
+# retry chain, and three retry levels across the catalogue above is already a lot of partitions
+# for one broker. Same key as the main topic (the producer resends with the original key), so
+# still `delete` cleanup, never compacted. Retry levels get a short retention - a message should
+# be relayed back out within its own delay, not linger - while the DLT gets 30 days, matching
+# payment.event.v1, so there is a real window to notice and replay it.
+retry_chain() {
+  local topic="$1"
+  create "${topic}.retry-5s" 3 delete 86400000
+  create "${topic}.retry-1m" 3 delete 86400000
+  create "${topic}.retry-10m" 3 delete 86400000
+  create "${topic}.DLT" 3 delete 2592000000
+}
+
+retry_chain identity.user.v1
+retry_chain account.account.v1
+retry_chain ledger.entry.v1
+retry_chain payment.event.v1
+retry_chain notification.push.v1
+retry_chain fx.rate.tick.v1
+retry_chain fx.quote.v1
+retry_chain card.authorization.v1
+
 echo "All topics created. Current state:"
 "${KAFKA_TOPICS}" --bootstrap-server "${BOOTSTRAP}" --list

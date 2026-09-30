@@ -8,8 +8,10 @@ import com.revolutclone.messaging.outbox.OutboxEvent;
 import com.revolutclone.messaging.outbox.OutboxEventRepository;
 import com.revolutclone.messaging.outbox.OutboxPublisher;
 import com.revolutclone.messaging.spring.KafkaEventPublisher;
+import com.revolutclone.messaging.spring.RetryTopicProperties;
 import java.time.Clock;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -26,6 +28,7 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableScheduling
 @EntityScan(basePackageClasses = {OutboxEvent.class, ProcessedEvent.class})
 @EnableJpaRepositories(basePackageClasses = {OutboxEventRepository.class, ProcessedEventRepository.class})
+@EnableConfigurationProperties(RetryTopicProperties.class)
 @ComponentScan(
         basePackageClasses = {
             OutboxAppenderImpl.class, OutboxPublisher.class, IdempotentHandlerFactory.class, KafkaEventPublisher.class
