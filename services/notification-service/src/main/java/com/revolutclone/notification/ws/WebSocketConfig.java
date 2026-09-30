@@ -30,20 +30,21 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *       socket that can never be sent to.</li>
  * </ul>
  *
- * <h2>This service cannot run more than one replica</h2>
+ * <h2>Why every push goes through Redis, not straight to this broker</h2>
  *
  * <p>{@code enableSimpleBroker} is an in-memory broker, and STOMP sessions live in this JVM's
  * memory. With N replicas a user's socket may be held by a different instance than the one whose
- * Kafka consumer received their event, and that instance's {@code convertAndSendToUser} finds no
- * session and drops the push - silently, and only for some users, some of the time.
+ * Kafka consumer received their event, and that instance's {@code convertAndSendToUser} would find
+ * no session and drop the push - silently, and only for some users, some of the time. Phase 07
+ * task 9's fix is {@code RedisFanOutRelay}: {@code NotificationFanOut} and
+ * {@code RateTickBroadcaster} publish to a shared Redis channel instead of calling this broker
+ * directly, every instance subscribes to it, and whichever instance actually holds the session
+ * delivers the frame. That is what lets {@code notification-service} run more than one replica at
+ * all - the one thing every other service in this project could already do.
  *
- * <p><strong>That is a deployment constraint, not only a scaling one</strong>, and the phase says to
- * write it down rather than pretend it is not there: notification-service is pinned to exactly one
- * instance on a laptop, in ECS and on Kubernetes alike, while every other service in this project is
- * stateless and horizontally scalable from the day it was written. Phase 07 task 9 lifts the pin
- * with a Redis pub/sub fan-out between instances (the cheap answer; an external STOMP broker via
- * {@code enableStompBrokerRelay} is the proper one). Until then, treat the single replica as a known
- * constraint with a date on it.
+ * <p>The proper production answer is an external STOMP broker relay ({@code enableStompBrokerRelay}
+ * against RabbitMQ or ActiveMQ) rather than Redis pub/sub; {@code docs/failure-modes.md} records why
+ * this project takes the cheaper route instead of building that.
  */
 @Configuration
 @EnableWebSocketMessageBroker

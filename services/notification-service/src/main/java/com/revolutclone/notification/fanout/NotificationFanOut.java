@@ -2,11 +2,9 @@ package com.revolutclone.notification.fanout;
 
 import com.revolutclone.notification.domain.Notification;
 import com.revolutclone.notification.domain.NotificationRepository;
-import com.revolutclone.notification.ws.WebSocketConfig;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,6 +21,10 @@ import org.springframework.stereotype.Component;
  * client's own 5-second polling fallback exists precisely because a socket frame can be lost, while
  * nothing re-materialises a notification that was never stored. The push is not transactional -
  * there is no rolling a WebSocket frame back - which is another reason it goes last.
+ *
+ * <p>The push itself goes through {@link RedisFanOutRelay} rather than the local broker directly -
+ * see that class for why a single instance calling {@code SimpMessagingTemplate} is not enough
+ * once this service has more than one replica.
  */
 @Component
 public class NotificationFanOut {
@@ -30,11 +32,11 @@ public class NotificationFanOut {
     private static final Logger log = LoggerFactory.getLogger(NotificationFanOut.class);
 
     private final NotificationRepository notifications;
-    private final SimpMessagingTemplate broker;
+    private final RedisFanOutRelay relay;
 
-    public NotificationFanOut(NotificationRepository notifications, SimpMessagingTemplate broker) {
+    public NotificationFanOut(NotificationRepository notifications, RedisFanOutRelay relay) {
         this.notifications = notifications;
-        this.broker = broker;
+        this.relay = relay;
     }
 
     /** Persists a feed entry and pushes it to its owner. */
@@ -54,6 +56,6 @@ public class NotificationFanOut {
      */
     public void push(UUID userId, ClientEvent event) {
         log.debug("pushing {} for payment {} to user {}", event.type(), event.paymentId(), userId);
-        broker.convertAndSendToUser(userId.toString(), WebSocketConfig.USER_QUEUE, event);
+        relay.publishUserEvent(userId.toString(), event);
     }
 }

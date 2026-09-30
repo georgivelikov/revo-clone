@@ -18,9 +18,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * appears anywhere in the context Boot's own auto-detection backs off for the whole context -
  * see docs/spring-boot-4-notes.md, and the same pair on every other service here.
  *
- * <p><strong>This service can only run as a single instance.</strong> Its STOMP sessions live in
- * the JVM's memory, so a user's socket may be on a different replica than the consumer that
- * received their event. {@code WebSocketConfig} carries the full reasoning and the phase-07 fix.
+ * <p>STOMP sessions live in each instance's own JVM memory, so a user's socket can be on a
+ * different replica than the consumer that received their event - this service now runs any
+ * number of instances by routing every push through a Redis pub/sub fan-out instead of the local
+ * broker directly. {@code WebSocketConfig} and {@code RedisFanOutRelay} carry the full reasoning.
  */
 @SpringBootApplication
 @EntityScan(basePackageClasses = {Notification.class, AccountOwner.class})
