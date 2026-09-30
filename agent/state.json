@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "07.9",
+  "current": "07.10",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1681,12 +1681,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/07.9-redis-pub-sub-fan-out-for-notification",
-      "commit": null,
+      "commit": "d9e8dbc",
       "costUsd": 0,
-      "notes": null
+      "notes": "RedisFanOutRelay (new): NotificationFanOut's per-user push and RateTickBroadcaster's /topic/rates broadcast now publish to a shared Redis channel instead of calling SimpMessagingTemplate directly; every instance subscribes and delivers locally, so whichever instance holds a user's socket is the one that actually sends. Verified with a new integration test (NotificationFanOutMultiInstanceTest) booting two full Spring contexts sharing one Postgres and one Redis testcontainer - a push made through instance B's NotificationFanOut arrives on a socket only instance A holds. First attempt used com.fasterxml.jackson.databind.ObjectMapper and failed context startup (no such bean); this project pins Jackson 3 (tools.jackson) per docs/spring-boot-4-notes.md, corrected to JsonMapper. Ran agent/gate.ps1 -TaskId 07.9 by hand: GATE GREEN, mvn clean verify green, tripwire clean, 668 tests (up from 667 - the new test class)."
     },
     {
       "id": "07.10",
