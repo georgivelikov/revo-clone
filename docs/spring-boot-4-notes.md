@@ -719,11 +719,56 @@ configuration (7 services here: `ledger`, `payment`, `account`, `card`, `fx`, `n
 not something `common-messaging`'s shared `KafkaErrorHandlingConfig` can set, since Boot binds one
 `ConsumerFactory` per service from that service's own `spring.kafka.consumer.*` properties.
 
+## `DeadLetterPublishingRecoverer`'s headers: exact constant names and byte encoding, for reading a dead letter back out
+
+Source: <https://docs.spring.io/spring-kafka/docs/current/api/org/springframework/kafka/support/KafkaHeaders.html>
+and <https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html>, both
+rendering as Spring Kafka 4.1.1 (matches this project's pin). The jar itself could not be
+unzipped in this session (same sandbox restriction noted elsewhere in this file), so this is
+from the published docs rather than `javap` - flagging that per this file's own rule, in case a
+later session can confirm the byte layout directly.
+
+`org.springframework.kafka.listener.DeadLetterPublishingRecoverer` (used unmodified by phase 07's
+`KafkaErrorHandlingConfig`, `platform/common-messaging`) stamps these `KafkaHeaders` constants on
+every record it republishes to a `.DLT` topic - confirmed present at 4.1.1, values not printed by
+the docs site (only "Constant Field Values" links), so reference them as constants, never as
+literal strings:
+
+- `DLT_EXCEPTION_FQCN`, `DLT_EXCEPTION_CAUSE_FQCN`, `DLT_EXCEPTION_MESSAGE`,
+  `DLT_EXCEPTION_STACKTRACE` - UTF-8 strings.
+- `DLT_ORIGINAL_TOPIC` - UTF-8 string.
+- `DLT_ORIGINAL_PARTITION` - 4-byte big-endian int (`ByteBuffer.wrap(bytes).getInt()`).
+- `DLT_ORIGINAL_OFFSET`, `DLT_ORIGINAL_TIMESTAMP` - 8-byte big-endian long.
+- `DLT_ORIGINAL_TIMESTAMP_TYPE`, `DLT_ORIGINAL_CONSUMER_GROUP` - UTF-8 strings.
+
+No built-in decode helper exists anywhere in Spring Kafka - a reader has to call
+`headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_OFFSET).value()` and unwrap the bytes itself
+(`common-messaging`'s `DltHeaderReader`, task 07.4, is this decoder). `record.key()`/`.value()`
+are untouched by the recoverer - a DLT record's key is still the original entity id, which is
+why replaying it to the main topic via the ordinary `EventPublisher` port (not a raw
+`KafkaTemplate`) preserves partitioning exactly as `RetryTopicRelay` already does for the retry
+chain.
+
+## Micrometer gauges hold only a weak reference to their state object by default
+
+Source: <https://docs.spring.io/spring-boot/reference/actuator/metrics.html>, which gives the
+canonical registration idiom as a `MeterBinder` bean:
+`Gauge.builder("queueSize", queue::size).register(registry)`. `javadoc.io` and
+`docs.micrometer.io` were both unreachable in this session (WebFetch denied outside the
+`docs.spring.io` domain - no approval surface to grant it), so the weak-reference behavior
+itself is carried over from general Micrometer knowledge rather than confirmed against this
+exact page; treat it as needing a second check if it ever matters at the byte level.
+**Consequence that does need acting on regardless**: a gauge built from a lambda/method
+reference with no other strong reference anywhere in the application can have its state object
+collected by the next GC, after which the gauge silently stops updating (reads as a stale value,
+not an error). A component that registers gauges in a loop - `DltDepthMetrics` (task 07.4) does
+this once per consumed topic - must keep each `Supplier` in a field of the (singleton) bean
+itself, not just as a loop-local variable, so the bean's own lifetime keeps the supplier
+reachable.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
 
 - Actuator endpoint paths and the health-group config shape in Boot 4.1.
-- Whether `spring-kafka` 4.1's `DefaultErrorHandler` / `DeadLetterPublishingRecoverer` API
-  changed (phase 07's retry and DLT chain depends on it).
 - React 19 + Vite specifics are not a Spring concern and belong in the phase 03b notes.

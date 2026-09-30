@@ -46,6 +46,25 @@
       <artifactId>spring-kafka</artifactId>
     </dependency>
     <dependency>
+      <!-- Task 07.4: DltAdminController (browse/replay DLT records over HTTP). Every current
+           consumer of this module already has spring-boot-starter-web itself (confirmed by
+           grepping every service pom - the only WebFlux service, api-gateway, does not depend
+           on common-messaging), so this adds no new runtime capability to any of them - it just
+           lets this module compile its own controller. DltAdminController is still guarded with
+           @ConditionalOnClass so a future WebFlux-only consumer that excludes this transitive
+           dependency never fails to start over it; see docs/spring-boot-4-notes.md's
+           excludeName note for why an unconditional reference to a Servlet-only annotation type
+           would be the wrong way to make that safe. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <!-- Task 07.4: DltDepthMetrics's Micrometer gauge. Version comes from the micrometer-bom
+           spring-boot-dependencies imports, same as every other unpinned dependency here. -->
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+    <dependency>
       <!-- Boot 4.1 split Flyway's autoconfiguration out of spring-boot-autoconfigure into its
            own module; flyway-core alone does not activate it. See
            docs/spring-boot-4-notes.md. -->
