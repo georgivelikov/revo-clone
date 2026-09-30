@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "07.2",
+  "current": "07.3",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 229.32456330000002,
+    "totalSpentUsd": 232.19159390000002,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1555,11 +1555,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/07.2-errorhandlingdeserializer-so-poison",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "4d37a1a",
+      "costUsd": 2.867030599999999,
       "notes": null
     },
     {
@@ -1573,11 +1573,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
-      "attempts": 0,
+      "status": "in_progress",
+      "attempts": 2,
       "branch": "task/07.3-audit-every-consumer",
       "commit": null,
-      "costUsd": 0,
+      "costUsd": 0.0,
       "notes": null
     },
     {

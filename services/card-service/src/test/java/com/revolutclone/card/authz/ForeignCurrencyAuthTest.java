@@ -14,6 +14,7 @@ import com.revolutclone.card.fx.CardFxProperties;
 import com.revolutclone.card.fx.CardFxRateUnavailableException;
 import com.revolutclone.card.testsupport.AuthorizationTestSupport;
 import com.revolutclone.card.testsupport.FakeCardFxRates;
+import com.revolutclone.messaging.api.TransientMessagingException;
 import com.revolutclone.messaging.outbox.OutboxEvent;
 import com.revolutclone.money.Money;
 import java.util.List;
@@ -231,9 +232,13 @@ class ForeignCurrencyAuthTest extends AuthorizationTestSupport {
 
         // The five decline reasons are all statements about the card or the holder. "Our rate feed is
         // behind" is a statement about us, and a decline would be final and visible to the holder - so
-        // this throws, the message is retried, and no row is written either way.
+        // this throws, the message is retried, and no row is written either way. The consumer converts
+        // the raw CardFxRateUnavailableException to TransientMessagingException at the Kafka boundary
+        // (plans/phase-07-resilience-and-scale.md task 3) so DefaultErrorClassifier - which does not
+        // recognise the raw type - sends it into the retry chain instead of straight to the DLT.
         assertThatThrownBy(() -> tap("net-fx-09", pan, MERCHANT_MINOR, USD))
-                .isInstanceOf(CardFxRateUnavailableException.class);
+                .isInstanceOf(TransientMessagingException.class)
+                .hasCauseInstanceOf(CardFxRateUnavailableException.class);
 
         assertThat(authorizations.findByNetworkRef("net-fx-09")).isEmpty();
         assertThat(ledger.holds()).isEmpty();
