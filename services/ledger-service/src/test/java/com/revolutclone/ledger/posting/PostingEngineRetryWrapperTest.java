@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.revolutclone.ledger.chaos.ChaosLedgerState;
 import com.revolutclone.ledger.domain.AccountBalance;
 import com.revolutclone.ledger.domain.JournalEntry;
 import com.revolutclone.ledger.domain.JournalEntryType;
@@ -128,7 +129,7 @@ class PostingEngineRetryWrapperTest {
 
         @Bean
         PostingEngine postingEngine(PostingTransactionExecutor executor) {
-            return new PostingEngine(executor);
+            return new PostingEngine(executor, new ChaosLedgerState());
         }
 
         @Bean

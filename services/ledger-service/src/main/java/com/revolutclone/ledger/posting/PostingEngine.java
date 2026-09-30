@@ -1,5 +1,7 @@
 package com.revolutclone.ledger.posting;
 
+import com.revolutclone.ledger.chaos.ChaosLedgerState;
+import com.revolutclone.messaging.api.TransientMessagingException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -62,19 +64,41 @@ import org.springframework.stereotype.Service;
  * plans/phase-02-ledger.md's Balance maintenance and concurrency section. Each retry increments
  * the {@code ledger.posting.retry} counter ({@link PostingRetryMetrics}) rather than logging at
  * WARN, so a concurrency test's output stays readable.
+ *
+ * <h2>Chaos hooks (task 07.6)</h2>
+ *
+ * <p>{@code ledger.delay} and {@code ledger.fail-rate} are applied here, before
+ * {@link PostingTransactionExecutor} is ever called - deliberately outside both the
+ * {@code @Retryable} guard above and the transaction {@link PostingTransactionExecutor#postEntry}
+ * opens. A delay here does not hold a database transaction open, and the injected
+ * {@link TransientMessagingException} is a different exception type than
+ * {@link ObjectOptimisticLockingFailureException}, so {@code @Retryable} never intercepts it: it
+ * propagates out of the Kafka listener that called this method, where {@code DefaultErrorHandler}
+ * classifies it {@code TRANSIENT} and routes it into the retry-topic chain, exactly like a real
+ * transient failure would. {@code ledger.reject-all} is instead applied inside
+ * {@link PostingTransactionExecutor}, because forcing a rejection must still emit
+ * {@code EntryRejectedV1} through the outbox - see that class.
  */
 @Service
 public class PostingEngine {
 
     private final PostingTransactionExecutor executor;
+    private final ChaosLedgerState chaos;
 
-    public PostingEngine(PostingTransactionExecutor executor) {
+    public PostingEngine(PostingTransactionExecutor executor, ChaosLedgerState chaos) {
         this.executor = executor;
+        this.chaos = chaos;
     }
 
     @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3,
             backoff = @Backoff(delay = 20, multiplier = 2), listeners = "postingRetryMetrics")
     public PostEntryResult postEntry(PostEntryCommand command) {
+        chaos.applyDelay();
+        if (chaos.shouldFailTransiently()) {
+            throw new TransientMessagingException(
+                    "chaos: ledger.fail-rate injected a transient failure for idempotencyKey="
+                            + command.idempotencyKey());
+        }
         return executor.postEntry(command);
     }
 }

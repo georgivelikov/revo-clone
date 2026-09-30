@@ -10,11 +10,16 @@ import com.revolutclone.messaging.outbox.OutboxPublisher;
 import com.revolutclone.messaging.spring.KafkaEventPublisher;
 import com.revolutclone.messaging.spring.RetryTopicProperties;
 import java.time.Clock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import tools.jackson.databind.json.JsonMapper;
@@ -35,6 +40,8 @@ import tools.jackson.databind.json.JsonMapper;
         })
 public class MessagingAutoConfiguration {
 
+    private static final Logger log = LoggerFactory.getLogger(MessagingAutoConfiguration.class);
+
     @Bean
     public Clock messagingClock() {
         return Clock.systemUTC();
@@ -43,5 +50,19 @@ public class MessagingAutoConfiguration {
     @Bean
     public JsonMapper messagingJsonMapper() {
         return JsonMapper.builder().findAndAddModules().build();
+    }
+
+    /**
+     * plans/phase-07-resilience-and-scale.md's Risks &amp; gotchas: "Profile-gate it and add a
+     * startup log line when chaos is active, so you never spend an hour debugging a fault you
+     * injected last week." One runner here covers every service that carries this module
+     * (payment, ledger, fx, ...); {@code simulator-service} excludes this auto-configuration
+     * entirely (see its {@code SimulatorServiceApplication}) and logs its own equivalent line.
+     */
+    @Bean
+    @Profile("chaos")
+    public ApplicationRunner chaosProfileStartupLogger() {
+        return (ApplicationArguments args) -> log.warn(
+                "CHAOS PROFILE ACTIVE - fault-injection endpoints under /admin/chaos/** are enabled on this instance");
     }
 }

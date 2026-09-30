@@ -18,6 +18,12 @@ revolut:
     card:
       # card-service's /internal/cards/{cardId}/pan-for-network - see CardNetworkPanRestClient.
       base-url: ${CARD_BASE_URL}
+    chaos:
+      # Where POST /simulator/chaos forwards ledger.*/fx.*/outbox.* levers - see
+      # ChaosControlPlaneClient. Only meaningful with the chaos profile active.
+      ledger-base-url: ${LEDGER_BASE_URL}
+      fx-base-url: ${FX_BASE_URL}
+      payment-base-url: ${PAYMENT_BASE_URL}
 
 management:
   endpoints:

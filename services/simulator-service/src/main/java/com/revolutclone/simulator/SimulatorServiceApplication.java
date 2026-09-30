@@ -3,12 +3,18 @@ package com.revolutclone.simulator;
 import com.revolutclone.messaging.api.EventPublisher;
 import com.revolutclone.messaging.spring.KafkaEventPublisher;
 import com.revolutclone.simulator.card.CardSimulatorProperties;
+import com.revolutclone.simulator.chaos.ChaosSimulatorProperties;
 import com.revolutclone.simulator.fx.FxSimulatorProperties;
 import java.time.Clock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import tools.jackson.databind.json.JsonMapper;
@@ -31,8 +37,11 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @SpringBootApplication(excludeName = "com.revolutclone.messaging.MessagingAutoConfiguration")
 @EnableScheduling
-@EnableConfigurationProperties({FxSimulatorProperties.class, CardSimulatorProperties.class})
+@EnableConfigurationProperties({FxSimulatorProperties.class, CardSimulatorProperties.class,
+        ChaosSimulatorProperties.class})
 public class SimulatorServiceApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(SimulatorServiceApplication.class);
 
     public static void main(String[] args) {
         SpringApplication.run(SimulatorServiceApplication.class, args);
@@ -51,5 +60,18 @@ public class SimulatorServiceApplication {
     @Bean
     EventPublisher eventPublisher(KafkaTemplate<Object, Object> kafkaTemplate) {
         return new KafkaEventPublisher(kafkaTemplate);
+    }
+
+    /**
+     * This service excludes {@code MessagingAutoConfiguration} (see class javadoc above), so it
+     * does not get that module's own {@code chaosProfileStartupLogger} bean - see
+     * plans/phase-07-resilience-and-scale.md's Risks &amp; gotchas: "add a startup log line when
+     * chaos is active, so you never spend an hour debugging a fault you injected last week."
+     */
+    @Bean
+    @Profile("chaos")
+    ApplicationRunner chaosProfileStartupLogger() {
+        return (ApplicationArguments args) -> log.warn(
+                "CHAOS PROFILE ACTIVE - POST /simulator/chaos is reachable unauthenticated on this instance");
     }
 }

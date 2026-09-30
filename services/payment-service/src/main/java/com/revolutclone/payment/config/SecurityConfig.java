@@ -19,6 +19,11 @@ import org.springframework.security.web.SecurityFilterChain;
  *
  * <p>{@code /internal/payments} (task 06.6) is the one exception - see
  * {@code InternalPaymentController}'s javadoc for why it is deliberately not behind a JWT.
+ *
+ * <p>{@code /admin/chaos/**} (task 07.6, {@code common-messaging}'s
+ * {@code ChaosOutboxAdminController}) is the other: {@code simulator-service} calls it with no
+ * bearer token, same precedent as {@code /internal/payments}. Safe only because that controller
+ * is itself {@code @Profile("chaos")}-gated and never registered outside that profile.
  */
 @Configuration
 @EnableWebSecurity
@@ -39,7 +44,7 @@ public class SecurityConfig {
                                 // See InternalPaymentController's javadoc: the caller is another
                                 // backend service with no login of its own, and this project has no
                                 // service-to-service identity yet (Phase 07).
-                                "/internal/payments")
+                                "/internal/payments", "/admin/chaos/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

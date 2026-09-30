@@ -8,6 +8,10 @@ revolut:
   simulator:
     card:
       base-url: http://127.0.0.1:8086
+    chaos:
+      ledger-base-url: http://127.0.0.1:8083
+      fx-base-url: http://127.0.0.1:8085
+      payment-base-url: http://127.0.0.1:8084
 
 logging:
   structured:

@@ -22,11 +22,14 @@ public class OutboxPublisher {
     private final OutboxEventRepository repository;
     private final EventPublisher eventPublisher;
     private final Clock clock;
+    private final ChaosOutboxControl chaosOutboxControl;
 
-    public OutboxPublisher(OutboxEventRepository repository, EventPublisher eventPublisher, Clock clock) {
+    public OutboxPublisher(OutboxEventRepository repository, EventPublisher eventPublisher, Clock clock,
+            ChaosOutboxControl chaosOutboxControl) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
+        this.chaosOutboxControl = chaosOutboxControl;
     }
 
     @Scheduled(fixedDelayString = "${revolut.messaging.outbox.poll-delay-ms:1000}")
@@ -38,9 +41,16 @@ public class OutboxPublisher {
     /**
      * Exposed with an explicit batch size so tests can drive one poll cycle deterministically
      * instead of waiting on the scheduler.
+     *
+     * <p>Checked first, before even locking a batch: {@code outbox.pause} (plans/phase-07's Chaos
+     * control plane) must leave pending rows exactly as they are in the database, not lock and
+     * immediately release them.
      */
     @Transactional
     public int pollAndPublish(int batchSize) {
+        if (chaosOutboxControl.isPaused()) {
+            return 0;
+        }
         List<OutboxEvent> batch = repository.lockNextBatch(batchSize);
         for (OutboxEvent row : batch) {
             eventPublisher.publish(row.getTopic(), row.getPartitionKey(), row.getPayload());

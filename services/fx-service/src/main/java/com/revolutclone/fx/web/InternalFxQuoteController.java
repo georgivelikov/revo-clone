@@ -1,5 +1,7 @@
 package com.revolutclone.fx.web;
 
+import com.revolutclone.fx.chaos.ChaosFxState;
+import com.revolutclone.fx.chaos.FxDownChaosException;
 import com.revolutclone.fx.quote.CreateQuoteCommand;
 import com.revolutclone.fx.quote.FxQuote;
 import com.revolutclone.fx.quote.QuoteService;
@@ -40,10 +42,12 @@ public class InternalFxQuoteController {
 
     private final QuoteService quotes;
     private final WalletResolver wallets;
+    private final ChaosFxState chaos;
 
-    public InternalFxQuoteController(QuoteService quotes, WalletResolver wallets) {
+    public InternalFxQuoteController(QuoteService quotes, WalletResolver wallets, ChaosFxState chaos) {
         this.quotes = quotes;
         this.wallets = wallets;
+        this.chaos = chaos;
     }
 
     @PostMapping
@@ -51,6 +55,13 @@ public class InternalFxQuoteController {
             @CurrentUser UserPrincipal principal,
             @RequestHeader(value = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey,
             @Valid @RequestBody InternalCreateQuoteRequest request) {
+
+        // plans/phase-07's fx.down lever: checked first, before touching anything else, so a
+        // chaos-enabled outage looks exactly like fx-service being genuinely unreachable from
+        // payment-service's FxQuoteRestClient - which is what actually exercises the breaker.
+        if (chaos.isDown()) {
+            throw new FxDownChaosException();
+        }
 
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new MissingIdempotencyKeyException();

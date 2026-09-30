@@ -2,6 +2,7 @@ package com.revolutclone.ledger.posting;
 
 import com.revolutclone.contracts.events.EntryPostedV1;
 import com.revolutclone.contracts.events.EntryRejectedV1;
+import com.revolutclone.ledger.chaos.ChaosLedgerState;
 import com.revolutclone.ledger.domain.AccountBalance;
 import com.revolutclone.ledger.domain.AccountBalanceRepository;
 import com.revolutclone.ledger.domain.JournalEntry;
@@ -63,15 +64,17 @@ public class PostingTransactionExecutor {
     private final JournalEntryRepository journalEntryRepository;
     private final PostingRepository postingRepository;
     private final OutboxAppender outboxAppender;
+    private final ChaosLedgerState chaos;
 
     public PostingTransactionExecutor(LedgerAccountRepository ledgerAccountRepository,
             AccountBalanceRepository accountBalanceRepository, JournalEntryRepository journalEntryRepository,
-            PostingRepository postingRepository, OutboxAppender outboxAppender) {
+            PostingRepository postingRepository, OutboxAppender outboxAppender, ChaosLedgerState chaos) {
         this.ledgerAccountRepository = ledgerAccountRepository;
         this.accountBalanceRepository = accountBalanceRepository;
         this.journalEntryRepository = journalEntryRepository;
         this.postingRepository = postingRepository;
         this.outboxAppender = outboxAppender;
+        this.chaos = chaos;
     }
 
     @Transactional
@@ -87,6 +90,14 @@ public class PostingTransactionExecutor {
         if (existing.isPresent()) {
             JournalEntry entry = existing.get();
             return new PostEntryResult.Posted(entry, postingRepository.findByEntryId(entry.getId()));
+        }
+
+        // plans/phase-07's ledger.reject-all lever: "Every entry rejected - observe compensation."
+        // Goes through the same reject() path a real INSUFFICIENT_FUNDS rejection would, so
+        // EntryRejectedV1 is genuinely emitted through the outbox and payment-service's
+        // compensation runs exactly as it would for a real rejection - not merely logged.
+        if (chaos.rejectAll()) {
+            return reject(command, command.postings().get(0).ledgerAccountId(), EntryRejectionReason.INSUFFICIENT_FUNDS);
         }
 
         // Validate every line's account BEFORE writing anything - a rejected entry must leave
