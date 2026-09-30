@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "07.7",
+  "current": "07.9",
   "budget": {
     "perTaskCeilingUsd": 12.0,
-    "totalSpentUsd": 257.9964521,
+    "totalSpentUsd": 265.1206273,
     "totalCeilingUsd": 700.0
   },
   "tasks": [
@@ -1645,11 +1645,11 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "in_progress",
+      "status": "done",
       "attempts": 0,
       "branch": "task/07.7-analytics-rebuild-and-point-in-time",
-      "commit": null,
-      "costUsd": 0,
+      "commit": "ab3cbd1",
+      "costUsd": 7.1241752,
       "notes": null
     },
     {
@@ -1663,12 +1663,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/07.8-cooperativestickyassignor-graceful",
-      "commit": null,
+      "commit": "480f146",
       "costUsd": 0,
-      "notes": null
+      "notes": "Continued by hand in an interactive session rather than via agent/run.ps1: the branch already carried the full diff (CooperativeStickyAssignor on every service with a Kafka consumer group, server.shutdown=graceful + spring.lifecycle.timeout-per-shutdown-phase on all ten services, docker-compose.yml stop_grace_period raised past it, and the Boot 4.1 graceful-shutdown-default finding recorded in docs/spring-boot-4-notes.md) from a prior session that never committed or updated state.json. Verified the diff against the phase's Design detail (api-gateway/simulator-service/identity-service correctly skip the assignor property - no consumer group - and get only the shutdown settings) rather than rewriting it. Ran agent/gate.ps1 -TaskId 07.8 by hand: GATE GREEN, mvn clean verify green, tripwire clean, 667 tests (baseline held). No named tests for this task; total count unchanged from 07.7's 667."
     },
     {
       "id": "07.9",
