@@ -5,6 +5,7 @@ import { usePaymentPolling } from './hooks/usePaymentPolling'
 import { AppShell } from './layout/AppShell'
 import { ActivityDetailScreen } from './screens/ActivityDetailScreen'
 import { ActivityScreen } from './screens/ActivityScreen'
+import { AnalyticsScreen } from './screens/AnalyticsScreen'
 import { CardScreen } from './screens/CardScreen'
 import { ExchangeScreen } from './screens/ExchangeScreen'
 import { HomeScreen } from './screens/HomeScreen'
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/exchange" element={<ExchangeScreen />} />
           <Route path="/card" element={<CardScreen />} />
           <Route path="/vaults" element={<VaultsScreen />} />
+          <Route path="/analytics" element={<AnalyticsScreen />} />
           <Route path="/activity" element={<ActivityScreen />} />
           <Route path="/activity/:paymentId" element={<ActivityDetailScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />

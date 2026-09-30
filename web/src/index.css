@@ -22,6 +22,26 @@
   --color-negative: #ff5c5c;
   --color-pending: #f5a623;
 
+  /*
+   * Analytics dashboard categorical palette (task 06.10) - the dataviz skill's validated
+   * eight-hue dark-mode categorical order (references/palette.md), re-validated with the
+   * skill's own validator against this app's actual dark surface (#16161d, not the skill's
+   * default #1a1a19): all six checks pass (worst adjacent CVD delta-E 8.4, worst adjacent
+   * normal-vision delta-E 19.3, all >=3:1 contrast). Twelve fixed spend categories (06.2) share
+   * these eight slots - the skill's own series-count ladder ("7-8: token ceiling; past it, fold
+   * the tail into 'Other'") is why the four rarest/edge-case categories (Transfers, Cash,
+   * Income, and the literal overflow category "Other" itself) render with --color-subtle
+   * instead of a generated ninth-through-twelfth hue - see charts/categoryColors.ts.
+   */
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
+  --color-chart-3: #199e70;
+  --color-chart-4: #c98500;
+  --color-chart-5: #d55181;
+  --color-chart-6: #008300;
+  --color-chart-7: #9085e9;
+  --color-chart-8: #e66767;
+
   --font-sans:
     "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
