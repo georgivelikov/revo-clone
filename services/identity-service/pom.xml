@@ -58,6 +58,15 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <!-- Wraps the Keycloak Admin API call registration makes through IdentityProviderPort -
+           plans/phase-07-resilience-and-scale.md's Circuit breakers table names this hop
+           explicitly. Version comes from spring-cloud-dependencies, imported at the root;
+           confirmed present at 5.0.3 in docs/spring-boot-4-notes.md. Same dependency
+           payment-service uses for its payment -> fx breaker. -->
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>

@@ -32,6 +32,23 @@ revolut:
       admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID}
       admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      identity-keycloak:
+        # Registration is synchronous on the Keycloak Admin API - see
+        # plans/phase-07-resilience-and-scale.md's Circuit breakers table. Same deliberate
+        # numbers as payment-service's fx-quote breaker; tuned here only where the phase's own
+        # reasoning calls for a specific number, defaults otherwise.
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        # A duplicate-email rejection is a legitimate outcome, not evidence Keycloak is
+        # unhealthy - it must not count toward the failure rate that trips the breaker.
+        ignore-exceptions:
+          - com.revolutclone.identity.error.DuplicateEmailException
+
 management:
   endpoints:
     web:
