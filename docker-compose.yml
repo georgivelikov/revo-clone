@@ -140,6 +140,13 @@ services:
       PAYMENT_DB_PASSWORD: payment
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      # Cross-currency transfers obtain a quote from fx-service over HTTP (plans/phase-04's
+      # Variant, task 8) - without this, FxClientProperties.baseUrl() binds the literal
+      # unresolved "${FX_BASE_URL}" text, which RestClient's URI builder later tries to expand
+      # as a template variable and fails every single cross-currency transfer unconditionally,
+      # with no relation to fx-service's actual health. Found via
+      # plans/phase-07-resilience-and-scale.md's fx.down experiment - see docs/failure-modes.md.
+      FX_BASE_URL: ${FX_BASE_URL:-http://fx-service:8085}
     depends_on:
       postgres:
         condition: service_healthy

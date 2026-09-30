@@ -1,0 +1,28 @@
+# Optional overlay that turns on the `chaos` Spring profile for the four services that carry a
+# chaos control surface: simulator-service (POST /simulator/chaos, the one endpoint an operator
+# actually calls) and the three services whose own admin endpoints it forwards to -
+# ledger-service, fx-service and payment-service. See plans/phase-07-resilience-and-scale.md's
+# "Chaos control plane" section and ChaosController's javadoc.
+#
+# Deliberately a separate file rather than a line in docker-compose.yml: the phase requires the
+# profile off by default ("a chaos endpoint reachable in a demo build is a genuinely bad idea"),
+# so activating it has to be an explicit opt-in on the command line, not something a plain
+# `docker compose up` ever does by accident.
+#
+#   docker compose -f docker-compose.infra.yml -f docker-compose.yml -f docker-compose.chaos.yml \
+#       --profile services up -d --build
+#
+# docs/failure-modes.md's experiments were all run with this overlay applied.
+services:
+  simulator-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: chaos
+  ledger-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: chaos
+  fx-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: chaos
+  payment-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: chaos
