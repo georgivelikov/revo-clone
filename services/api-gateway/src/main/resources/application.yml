@@ -1,9 +1,14 @@
 server:
   port: ${SERVER_PORT:8080}
+  shutdown: graceful
 
 spring:
   application:
     name: api-gateway
+  lifecycle:
+    # docker-compose.yml's stop_grace_period for this service must exceed this value, or Docker
+    # SIGKILLs the JVM before the graceful phase completes.
+    timeout-per-shutdown-phase: 30s
   main:
     web-application-type: reactive
   data:

@@ -1,9 +1,14 @@
 server:
   port: ${SERVER_PORT:8083}
+  shutdown: graceful   # Kafka listener containers finish in-flight records before this JVM exits.
 
 spring:
   application:
     name: ledger-service
+  lifecycle:
+    # docker-compose.yml's stop_grace_period for this service must exceed this value, or Docker
+    # SIGKILLs the JVM before the graceful phase completes.
+    timeout-per-shutdown-phase: 30s
   datasource:
     url: ${LEDGER_DB_URL}
     username: ${LEDGER_DB_USER}
@@ -21,6 +26,10 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
         "[spring.deserializer.value.delegate.class]": org.apache.kafka.common.serialization.StringDeserializer
+        # Cooperative rebalancing: only the partitions actually moving pause during a scale
+        # event, instead of every consumer stopping (the default eager protocol's behaviour).
+        # See plans/phase-07-resilience-and-scale.md's "Scaling consumers" section.
+        "[partition.assignment.strategy]": org.apache.kafka.clients.consumer.CooperativeStickyAssignor
   security:
     oauth2:
       resourceserver:

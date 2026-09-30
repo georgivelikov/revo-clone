@@ -20,6 +20,9 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     container_name: revolut-api-gateway
     profiles: ["services"]
+    # Must exceed spring.lifecycle.timeout-per-shutdown-phase (30s) or Docker SIGKILLs the JVM
+    # mid-graceful-shutdown - see plans/phase-07-resilience-and-scale.md's Graceful shutdown section.
+    stop_grace_period: 35s
     ports:
       - "8080:8080"
     environment:
@@ -70,6 +73,7 @@ services:
       dockerfile: services/identity-service/Dockerfile
     container_name: revolut-identity-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8081:8081"
     environment:
@@ -100,6 +104,7 @@ services:
       dockerfile: services/account-service/Dockerfile
     container_name: revolut-account-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8082:8082"
     environment:
@@ -126,6 +131,7 @@ services:
       dockerfile: services/payment-service/Dockerfile
     container_name: revolut-payment-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8084:8084"
     environment:
@@ -152,6 +158,7 @@ services:
       dockerfile: services/notification-service/Dockerfile
     container_name: revolut-notification-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8088:8088"
     environment:
@@ -186,6 +193,7 @@ services:
       dockerfile: services/simulator-service/Dockerfile
     container_name: revolut-simulator-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8089:8089"
     environment:
@@ -220,6 +228,7 @@ services:
       dockerfile: services/ledger-service/Dockerfile
     container_name: revolut-ledger-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8083:8083"
     environment:
@@ -246,6 +255,7 @@ services:
       dockerfile: services/fx-service/Dockerfile
     container_name: revolut-fx-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8085:8085"
     environment:
@@ -277,6 +287,7 @@ services:
       dockerfile: services/card-service/Dockerfile
     container_name: revolut-card-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8086:8086"
     environment:
@@ -320,6 +331,7 @@ services:
       dockerfile: services/analytics-service/Dockerfile
     container_name: revolut-analytics-service
     profiles: ["services"]
+    stop_grace_period: 35s
     ports:
       - "8087:8087"
     environment:

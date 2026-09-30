@@ -766,6 +766,29 @@ this once per consumed topic - must keep each `Supplier` in a field of the (sing
 itself, not just as a loop-local variable, so the bean's own lifetime keeps the supplier
 reachable.
 
+## `server.shutdown` defaults to `graceful` in Boot 4.1 - Boot 3 material says otherwise
+
+Source: <https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html> (Boot 4.1
+reference docs). Quoted directly: "Graceful shutdown is enabled by default with all three
+embedded web servers (Jetty, Reactor Netty, and Tomcat) and with both reactive and
+servlet-based web applications." Most Boot 3 guidance online says the opposite - that
+`server.shutdown=immediate` is the default and `graceful` is opt-in. That was true for Boot 3;
+it is not true here. Setting `server.shutdown: graceful` explicitly in every service's
+`application.yml` (task 07.8) is therefore redundant with the default, but kept anyway so the
+setting is visible and not accidentally relied upon as an undocumented default. The
+per-shutdown-phase timeout (`spring.lifecycle.timeout-per-shutdown-phase`, default 30s per
+Spring Framework's `DefaultLifecycleProcessor`) still needs stating explicitly if
+`docker-compose.yml`'s `stop_grace_period` is to be sized against it deliberately rather than
+by luck.
+
+Kafka listener containers (`ConcurrentMessageListenerContainer` et al.) implement
+`SmartLifecycle`. `ConfigurableApplicationContext.close()` stops all `SmartLifecycle` beans
+(the graceful-shutdown phase) *before* it destroys singleton beans - which is when a
+`@Bean`-managed `HikariDataSource` closes. That ordering is inherent to context shutdown, not
+something `common-messaging` has to wire up: as long as graceful shutdown is enabled with a
+timeout long enough for the current record to finish, Kafka listener containers stop cleanly
+before the DB pool underneath them goes away.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
