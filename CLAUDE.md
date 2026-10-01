@@ -82,6 +82,8 @@ exactly, and reproduce it as a comment at the top of `PostingEngine`.
 Gateway 8080, identity 8081, account 8082, ledger 8083, payment 8084, fx 8085, card 8086,
 analytics 8087, notification 8088, simulator 8089.
 Infra: Postgres 5432, Redis 6379, Keycloak 8180, Kafka 9092, Kafka UI 8090, web 5173.
+Observability (`docker-compose.obs.yml`, phase 08): Prometheus 9090, Grafana 3000,
+kafka-exporter 9308, postgres-exporter 9187.
 
 ## Working style
 

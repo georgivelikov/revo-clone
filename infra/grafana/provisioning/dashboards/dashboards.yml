@@ -1,0 +1,14 @@
+# Points Grafana at infra/grafana/dashboards/*.json on every start. Task 08.4 drops the
+# dashboard JSON into that directory; this provider config is what makes it load automatically
+# rather than needing to be re-imported by hand through Grafana's UI after every rebuild.
+apiVersion: 1
+
+providers:
+  - name: revolut
+    folder: Revolut
+    type: file
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

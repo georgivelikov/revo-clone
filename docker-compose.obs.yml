@@ -1,0 +1,80 @@
+# Observability overlay for plans/phase-08-load-and-observability.md: Prometheus, Grafana,
+# kafka-exporter, postgres-exporter. A separate file from docker-compose.yml, same reasoning as
+# docker-compose.chaos.yml - this is optional tooling, not something every `docker compose up`
+# should pay container-startup cost for.
+#
+#   docker compose -f docker-compose.infra.yml -f docker-compose.yml -f docker-compose.obs.yml \
+#       --profile services up -d --build
+#
+# Grafana: http://127.0.0.1:3000 (admin/admin, dev-only - see keycloak's identical bootstrap
+# admin password in docker-compose.infra.yml for the same local-only tradeoff).
+# Prometheus: http://127.0.0.1:9090
+services:
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: revolut-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: revolut-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      # One mount for the whole provisioning tree, not a second mount nested inside it - a
+      # child bind mount cannot attach inside a parent directory that is itself mounted
+      # read-only (Docker needs to mkdir the mountpoint first). Dashboard JSON lives on the
+      # host at infra/grafana/provisioning/dashboards/json/ instead, matching
+      # dashboards.yml's configured `path` exactly.
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # Exposes Kafka's own JMX-derived metrics (consumer lag per group/partition, messages/sec per
+  # topic) in Prometheus's text format - plans/phase-08's own "lag is a broker-side metric" note:
+  # this is why lag is scraped from the broker's perspective rather than computed app-side.
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.8.0
+    container_name: revolut-kafka-exporter
+    command: ["--kafka.server=kafka:19092"]
+    ports:
+      - "9308:9308"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # One exporter for the whole Postgres instance (every service's database lives on this one
+  # container, per CLAUDE.md rule 7's "every service owns its database" - same instance, separate
+  # schemas-as-databases) - connects as the bootstrap superuser docker-compose.infra.yml already
+  # sets up for container init, which is the right account for a read-only pg_stat_database
+  # monitor, not a Flyway-migration role (CLAUDE.md rule 8 is about schema migrations, not this).
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: revolut-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  prometheus_data:
+  grafana_data:

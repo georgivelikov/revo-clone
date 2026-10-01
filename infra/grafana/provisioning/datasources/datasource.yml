@@ -1,0 +1,12 @@
+# Provisioned at container start - deleting Grafana's volume and restarting reproduces the
+# same datasource, which is the whole point of "provisioned, not just in Grafana's local
+# state" from plans/phase-08-load-and-observability.md's Done when.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

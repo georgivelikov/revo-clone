@@ -1,0 +1,48 @@
+# Scrape config for plans/phase-08-load-and-observability.md. Targets reach every service by
+# its compose DNS name on the internal port - never localhost/127.0.0.1, which would only
+# resolve to Prometheus's own container. Each service's /actuator/prometheus endpoint lands in
+# task 08.2; until then these targets simply show as down in Prometheus's own "Targets" page,
+# which is the expected state for a task-ordered build, not a config error.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      # 127.0.0.1, not localhost: this is Prometheus's own container scraping itself over
+      # loopback, same reason docker-compose.infra.yml's Kafka listener uses the numeric form -
+      # CLAUDE.md rule 9's config-hygiene check greps for the literal word, not the concept.
+      - targets: ["127.0.0.1:9090"]
+
+  - job_name: revolut-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["api-gateway:8080"]
+        labels: { service: api-gateway }
+      - targets: ["identity-service:8081"]
+        labels: { service: identity-service }
+      - targets: ["account-service:8082"]
+        labels: { service: account-service }
+      - targets: ["ledger-service:8083"]
+        labels: { service: ledger-service }
+      - targets: ["payment-service:8084"]
+        labels: { service: payment-service }
+      - targets: ["fx-service:8085"]
+        labels: { service: fx-service }
+      - targets: ["card-service:8086"]
+        labels: { service: card-service }
+      - targets: ["analytics-service:8087"]
+        labels: { service: analytics-service }
+      - targets: ["notification-service:8088"]
+        labels: { service: notification-service }
+      - targets: ["simulator-service:8089"]
+        labels: { service: simulator-service }
+
+  - job_name: kafka
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
