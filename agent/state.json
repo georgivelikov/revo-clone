@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.3",
+  "current": "08.4",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1753,12 +1753,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.3-custom-metrics-above-with-consistent",
-      "commit": null,
+      "commit": "53ee48a",
       "costUsd": 0,
-      "notes": null
+      "notes": "All 8 metrics from the phase's Instrumentation table: ledger.entries.posted{type}/rejected{reason} and ledger.posting.duration in PostingEngine (around the executor call, so a chaos transient failure counts as neither outcome); ledger.optimistic.retries (renamed from the existing phase-02 ledger.posting.retry - only the registered name changed, tests reference retryCount() not the name string); outbox.pending.count/oldest.age.seconds via new OutboxMetrics in common-messaging; kafka.dlt.messages{topic} alongside the existing kafka.dlt.depth gauge, incremented only on the hop that actually lands on the DLT; fx.quote.active.count via new FxQuoteMetrics; payment.end.to.end recorded as now-createdAt directly in PaymentResultApplier (a live Timer.Sample can't survive the Kafka round-trip between accept and terminal state). First gate attempt failed tripwire: OutboxMetrics' double-returning gauge supplier tripped the blunt double/float money rule (same shape-not-meaning limitation PostingRetryMetrics' own javadoc already documents) - fixed by switching to Gauge.builder(name, Supplier<Number>) with long-returning suppliers, matching DltDepthMetrics' existing pattern exactly. Verified live: all gauges/counters/timers appear in /actuator/prometheus with correct values, including ledger_entries_posted_total{type=\"TRANSFER\"} after firing a real transfer."
     },
     {
       "id": "08.4",
