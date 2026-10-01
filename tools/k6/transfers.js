@@ -8,7 +8,10 @@
 //   docker run --rm -i --network revolut_default -v "%cd%/tools/k6:/scripts" grafana/k6 run \
 //       /scripts/transfers.js
 //
-// Override USER_COUNT, or any tools/k6/lib/config.js default, with -e NAME=value.
+// MODE=baseline (task 08.6) runs a flat constant-arrival-rate hold instead of the ramp, at
+// BASELINE_RATE (default 100) for BASELINE_DURATION (default 5m) - "record it before tuning
+// anything" needs one number at one steady rate, not a curve. Default MODE is the ramp itself
+// (task 08.7). Override USER_COUNT, or any tools/k6/lib/config.js default, with -e NAME=value.
 import http from 'k6/http';
 import { check } from 'k6';
 import { setupUsers } from './lib/setup.js';
@@ -16,23 +19,35 @@ import { getToken, authHeaders } from './lib/auth.js';
 import { BASE_URL } from './lib/config.js';
 
 const USER_COUNT = parseInt(__ENV.USER_COUNT || '50', 10);
+const MODE = __ENV.MODE || 'ramp';
+
+const RAMP_SCENARIO = {
+    executor: 'ramping-arrival-rate',
+    startRate: 10,
+    timeUnit: '1s',
+    preAllocatedVUs: 200,
+    maxVUs: 600,
+    stages: [
+        { target: 500, duration: '5m' },
+        { target: 500, duration: '5m' },
+    ],
+};
+
+const BASELINE_SCENARIO = {
+    executor: 'constant-arrival-rate',
+    rate: parseInt(__ENV.BASELINE_RATE || '100', 10),
+    timeUnit: '1s',
+    duration: __ENV.BASELINE_DURATION || '5m',
+    preAllocatedVUs: 100,
+    maxVUs: 300,
+};
 
 export const options = {
     // See hotspot.js's identical comment - k6's default setup() timeout (60s) is too short for
     // setupUsers() registering/funding many users one at a time.
     setupTimeout: '5m',
     scenarios: {
-        transfers: {
-            executor: 'ramping-arrival-rate',
-            startRate: 10,
-            timeUnit: '1s',
-            preAllocatedVUs: 200,
-            maxVUs: 600,
-            stages: [
-                { target: 500, duration: '5m' },
-                { target: 500, duration: '5m' },
-            ],
-        },
+        transfers: MODE === 'baseline' ? BASELINE_SCENARIO : RAMP_SCENARIO,
     },
     thresholds: {
         http_req_failed: ['rate<0.01'],
