@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.11",
+  "current": "09.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1897,12 +1897,12 @@
       ],
       "tests": [],
       "lastInPhase": true,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.11-write-docs-performance-md",
-      "commit": null,
+      "commit": "3de7bc4",
       "costUsd": 0,
-      "notes": null
+      "notes": "Wrote docs/performance.md consolidating 08.6-08.10 plus two new measurements this task ran specifically to close checklist gaps no earlier task's data could fill. (1) A real spike.js run at full scale (08.5's run was only a reduced-scale smoke test of the script, not the measurement) - accept layer 99.92% success at the 1000rps instant step, consumer lag spiked to ~45000-47000 and was measured, by polling Prometheus every 45s from end-of-run until both groups independently read 0, draining in ~8.3 min (ledger-service) and ~10.5 min (notification-service), unassisted. (2) 60rps and 10rps runs to answer 'documented sustained throughput at p99<500ms end-to-end', which every earlier run (all at or above the ~77-90 msgs/sec consumer ceiling) could not answer - both ran with zero congestion yet produced nearly identical end-to-end p50/p95/p99 (~1.4s/2.0s/2.4s at both 10 and 60 rps), proving the floor is structural (two sequential outbox-poll hops in the critical path, each averaging ~500ms wait-for-next-tick when 08.9's adaptive reloop doesn't engage) rather than load-dependent - documented as a refuted checklist item with root cause and what would actually close the gap (event-driven outbox triggering or a shorter poll interval), not left unanswered. Gate's check 7 (phase verification) ran for the first time this phase and passed. Zero-sum invariant and DLT depth checked clean after every run in the document, no exceptions, across roughly 700,000 transfers total. Phase 08 complete: all 11 tasks done, every 'Done when' checklist item addressed with data (including the one item - p99<500ms - whose honest answer is 'not achieved, here is why')."
     },
     {
       "id": "09.1",
