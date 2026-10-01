@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.7",
+  "current": "08.8",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1825,12 +1825,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.7-ramp-run-to-find-the-knee-record-p99",
-      "commit": null,
+      "commit": "fd50090",
       "costUsd": 0,
-      "notes": null
+      "notes": "Real run: 80 users, ramp 10->500 rps over 5 min then held at 500 for 5 more (226490 transfers, docs/perf-runs/08.7-ramp.json). No knee at the HTTP accept layer even held at 500 rps: p95 84.02ms, p99 sampled every 30s via Prometheus range query oscillated ~19-310ms, 0.02% http_req_failed. The knee is entirely downstream and task 08.6's outbox finding sharpens a lot at this rate: payment-service needs ~500 outbox rows/sec at the plateau against its ~100/sec poller ceiling (5x over, vs 08.6's ~1x-at-the-edge), ending the run with ~197700 unpublished rows on payment-service and only ~18000 on ledger-service - counter-intuitively less despite needing double payment-service's per-transfer rate, because ledger-service only ever sees what payment-service's own backlogged poller actually got around to publishing: payment-service's single outbox poller is the system's real sustained-throughput ceiling today (~100 transfers/sec), not the 500rps the HTTP layer accepts without complaint. end-to-end latency read p50=p95=p99=30s (histogram ceiling) for the same reason as 08.6, far more pronounced. Zero-sum invariant held throughout. First gate attempt hit an unrelated, non-reproducible flaky test (card-service's LimitExceededTest, a test-isolation-looking ApplicationContext load issue on a pl-only mvn invocation) - confirmed not caused by this commit (which touches only a JSON data file) by re-running the full card-service suite clean (103/103) and re-gating green."
     },
     {
       "id": "08.8",
