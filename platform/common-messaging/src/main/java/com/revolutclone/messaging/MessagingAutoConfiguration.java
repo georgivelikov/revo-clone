@@ -6,11 +6,14 @@ import com.revolutclone.messaging.idempotent.ProcessedEventRepository;
 import com.revolutclone.messaging.outbox.OutboxAppenderImpl;
 import com.revolutclone.messaging.outbox.OutboxEvent;
 import com.revolutclone.messaging.outbox.OutboxEventRepository;
+import com.revolutclone.messaging.outbox.OutboxMetrics;
 import com.revolutclone.messaging.outbox.OutboxPublisher;
 import com.revolutclone.messaging.spring.KafkaEventPublisher;
 import com.revolutclone.messaging.spring.RetryTopicProperties;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -50,6 +53,12 @@ public class MessagingAutoConfiguration {
     @Bean
     public JsonMapper messagingJsonMapper() {
         return JsonMapper.builder().findAndAddModules().build();
+    }
+
+    @Bean
+    public OutboxMetrics outboxMetrics(OutboxEventRepository repository, Clock clock,
+            ObjectProvider<MeterRegistry> meterRegistryProvider) {
+        return new OutboxMetrics(repository, clock, meterRegistryProvider);
     }
 
     /**

@@ -2,6 +2,8 @@ package com.revolutclone.ledger.posting;
 
 import com.revolutclone.ledger.chaos.ChaosLedgerState;
 import com.revolutclone.messaging.api.TransientMessagingException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -62,7 +64,7 @@ import org.springframework.stereotype.Service;
  * rollback-only." Retries are capped at 3 attempts with a small exponential backoff (20ms, then
  * 40ms), per "retry the whole operation up to 3 times with a small backoff" in
  * plans/phase-02-ledger.md's Balance maintenance and concurrency section. Each retry increments
- * the {@code ledger.posting.retry} counter ({@link PostingRetryMetrics}) rather than logging at
+ * the {@code ledger.optimistic.retries} counter ({@link PostingRetryMetrics}) rather than logging at
  * WARN, so a concurrency test's output stays readable.
  *
  * <h2>Chaos hooks (task 07.6)</h2>
@@ -78,16 +80,32 @@ import org.springframework.stereotype.Service;
  * transient failure would. {@code ledger.reject-all} is instead applied inside
  * {@link PostingTransactionExecutor}, because forcing a rejection must still emit
  * {@code EntryRejectedV1} through the outbox - see that class.
+ *
+ * <h2>Metrics (plans/phase-08-load-and-observability.md task 3)</h2>
+ *
+ * <p>{@code ledger.entries.posted{type}} and {@code ledger.entries.rejected{reason}} are counted
+ * here rather than in {@link PostingTransactionExecutor}, so a chaos-injected transient failure
+ * (thrown before the executor is even called) correctly counts as neither - it is a failed
+ * attempt that gets retried, not a settled outcome. {@code ledger.posting.duration} times every
+ * attempt that reaches the executor and returns normally (a thrown exception, transient or an
+ * optimistic-lock conflict, is excluded the same way - it is not "how long a posting took", it is
+ * "how long until this attempt gave up").
  */
 @Service
 public class PostingEngine {
 
     private final PostingTransactionExecutor executor;
     private final ChaosLedgerState chaos;
+    private final MeterRegistry meterRegistry;
+    private final Timer postingDurationTimer;
 
-    public PostingEngine(PostingTransactionExecutor executor, ChaosLedgerState chaos) {
+    public PostingEngine(PostingTransactionExecutor executor, ChaosLedgerState chaos, MeterRegistry meterRegistry) {
         this.executor = executor;
         this.chaos = chaos;
+        this.meterRegistry = meterRegistry;
+        this.postingDurationTimer = Timer.builder("ledger.posting.duration")
+                .description("Latency of one PostingTransactionExecutor.postEntry call that returned normally")
+                .register(meterRegistry);
     }
 
     @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3,
@@ -99,6 +117,19 @@ public class PostingEngine {
                     "chaos: ledger.fail-rate injected a transient failure for idempotencyKey="
                             + command.idempotencyKey());
         }
-        return executor.postEntry(command);
+        Timer.Sample sample = Timer.start(meterRegistry);
+        PostEntryResult result = executor.postEntry(command);
+        sample.stop(postingDurationTimer);
+        recordOutcome(result);
+        return result;
+    }
+
+    private void recordOutcome(PostEntryResult result) {
+        switch (result) {
+            case PostEntryResult.Posted posted ->
+                meterRegistry.counter("ledger.entries.posted", "type", posted.entry().getType().name()).increment();
+            case PostEntryResult.Rejected rejected ->
+                meterRegistry.counter("ledger.entries.rejected", "reason", rejected.reason().name()).increment();
+        }
     }
 }

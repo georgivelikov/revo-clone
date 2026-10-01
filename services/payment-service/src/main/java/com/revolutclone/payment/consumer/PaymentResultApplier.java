@@ -6,6 +6,10 @@ import com.revolutclone.messaging.api.OutboxAppender;
 import com.revolutclone.payment.domain.Payment;
 import com.revolutclone.payment.domain.PaymentRepository;
 import com.revolutclone.payment.domain.PaymentStatus;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -45,6 +49,16 @@ import org.springframework.transaction.annotation.Transactional;
  * message retries and then dead-letters (see {@code KafkaErrorHandlingConfig}), which is the
  * correct outcome for a message no amount of retrying will make consistent: it stops, loudly,
  * with the evidence preserved.
+ *
+ * <h2>{@code payment.end.to.end} (plans/phase-08-load-and-observability.md task 3)</h2>
+ *
+ * <p>"Started on accept, stopped on terminal state" cannot be a live {@code Timer.Sample} held
+ * across the Kafka round-trip between the two - the start happened in a different method call,
+ * possibly a different process entirely by the time the result arrives. {@link Payment#getCreatedAt()}
+ * is that start time already, durably, so the duration is just {@code now - createdAt}, computed
+ * here and recorded directly. Only on the transition that actually settles the payment - the
+ * idempotent-replay branches above return before reaching it, so a redelivered result event
+ * never records a second, misleadingly-short duration for the same payment.
  */
 @Component
 public class PaymentResultApplier {
@@ -56,10 +70,17 @@ public class PaymentResultApplier {
 
     private final PaymentRepository payments;
     private final OutboxAppender outbox;
+    private final Clock clock;
+    private final Timer endToEndTimer;
 
-    public PaymentResultApplier(PaymentRepository payments, OutboxAppender outbox) {
+    public PaymentResultApplier(PaymentRepository payments, OutboxAppender outbox, Clock clock,
+            MeterRegistry meterRegistry) {
         this.payments = payments;
         this.outbox = outbox;
+        this.clock = clock;
+        this.endToEndTimer = Timer.builder("payment.end.to.end")
+                .description("Time from a payment's acceptance to its terminal state (COMPLETED or FAILED)")
+                .register(meterRegistry);
     }
 
     @Transactional
@@ -87,6 +108,7 @@ public class PaymentResultApplier {
         payment.markCompleted(ledgerEntryId);
         payments.save(payment);
         outbox.append(OUTBOX_TOPIC, paymentId.toString(), new PaymentCompletedV1(paymentId));
+        recordEndToEnd(payment);
         log.info("payment {} COMPLETED by ledger entry {}", paymentId, ledgerEntryId);
     }
 
@@ -106,6 +128,11 @@ public class PaymentResultApplier {
         payment.markFailed(reason);
         payments.save(payment);
         outbox.append(OUTBOX_TOPIC, paymentId.toString(), new PaymentFailedV1(paymentId, reason));
+        recordEndToEnd(payment);
         log.info("payment {} FAILED: {}", paymentId, reason);
+    }
+
+    private void recordEndToEnd(Payment payment) {
+        endToEndTimer.record(Duration.between(payment.getCreatedAt(), clock.instant()));
     }
 }

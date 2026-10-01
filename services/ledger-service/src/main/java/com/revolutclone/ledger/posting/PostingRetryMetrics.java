@@ -25,7 +25,10 @@ import org.springframework.stereotype.Component;
 @Component("postingRetryMetrics")
 class PostingRetryMetrics implements RetryListener {
 
-    static final String METRIC_NAME = "ledger.posting.retry";
+    // plans/phase-08-load-and-observability.md task 3's naming: ledger.optimistic.retries, not
+    // this class's original ledger.posting.retry - the metric's registered name, not the
+    // PostingRetryMetrics.retryCount() method tests call, so renaming it breaks nothing.
+    static final String METRIC_NAME = "ledger.optimistic.retries";
 
     private final Counter retryCounter;
 

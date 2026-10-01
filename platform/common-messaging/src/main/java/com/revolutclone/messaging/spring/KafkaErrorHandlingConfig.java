@@ -2,7 +2,9 @@ package com.revolutclone.messaging.spring;
 
 import com.revolutclone.messaging.api.ErrorClassifier;
 import com.revolutclone.messaging.api.RetryClassification;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.common.TopicPartition;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaOperations;
@@ -51,12 +53,24 @@ public class KafkaErrorHandlingConfig {
     }
 
     @Bean
-    public DefaultErrorHandler kafkaErrorHandler(KafkaOperations<Object, Object> kafkaOperations, ErrorClassifier errorClassifier) {
+    public DefaultErrorHandler kafkaErrorHandler(KafkaOperations<Object, Object> kafkaOperations,
+            ErrorClassifier errorClassifier, ObjectProvider<MeterRegistry> meterRegistryProvider) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
                 kafkaOperations,
                 (record, exception) -> {
                     RetryClassification classification = errorClassifier.classify(exception);
                     String nextTopic = RetryTopicNames.nextTopic(record.topic(), classification);
+                    // plans/phase-08-load-and-observability.md task 3's kafka.dlt.messages{topic}
+                    // counter - incremented only on the hop that actually lands on the DLT, not
+                    // every escalation up the retry chain. Complements kafka.dlt.depth
+                    // (DltDepthMetrics): depth can fall after a replay, this never does.
+                    if (nextTopic.endsWith(RetryTopicNames.DLT_SUFFIX)) {
+                        MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
+                        if (meterRegistry != null) {
+                            meterRegistry.counter("kafka.dlt.messages", "topic", RetryTopicNames.mainTopicOf(nextTopic))
+                                    .increment();
+                        }
+                    }
                     // Retry/DLT topics have 3 partitions, the main topics 12 - a negative
                     // partition tells the recoverer to let the producer's partitioner pick one by
                     // key instead of reusing the original (possibly out-of-range) partition

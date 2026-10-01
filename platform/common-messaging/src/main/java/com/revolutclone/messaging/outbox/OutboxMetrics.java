@@ -1,0 +1,44 @@
+package com.revolutclone.messaging.outbox;
+
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Clock;
+import java.time.Duration;
+import org.springframework.beans.factory.ObjectProvider;
+
+/**
+ * {@code outbox.pending.count} and {@code outbox.oldest.age.seconds}
+ * (plans/phase-08-load-and-observability.md task 3) - both backed by the repository and pulled
+ * at scrape time via {@link Gauge}'s weak-referenced value-supplier, not pushed on a schedule.
+ * Age, not just count, is what the phase's own Instrumentation section says to alert on: "a
+ * growing count might just be throughput, but an old row means the poller is genuinely stuck."
+ *
+ * <p>{@code MeterRegistry} arrives as an {@link ObjectProvider}, not a hard constructor
+ * dependency - same reason as {@code DltDepthMetrics} (see its javadoc): this module's own test
+ * context ({@code TestMessagingApplication}) carries no {@code spring-boot-starter-actuator}, so
+ * no {@code MeterRegistry} bean exists there, and a hard dependency would fail every
+ * {@code @SpringBootTest} in this module at context-creation time rather than simply registering
+ * no gauges. Every real consumer of this module has actuator, so in production this always
+ * resolves.
+ */
+public class OutboxMetrics {
+
+    public OutboxMetrics(OutboxEventRepository repository, Clock clock, ObjectProvider<MeterRegistry> meterRegistryProvider) {
+        MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
+        if (meterRegistry == null) {
+            return;
+        }
+        Gauge.builder("outbox.pending.count", repository, OutboxEventRepository::countByPublishedAtIsNull)
+                .description("Unpublished rows in this service's own outbox table")
+                .register(meterRegistry);
+        Gauge.builder("outbox.oldest.age.seconds", repository, repo -> ageOf(repo, clock))
+                .description("Age of the oldest unpublished outbox row, zero when nothing is pending")
+                .register(meterRegistry);
+    }
+
+    private static double ageOf(OutboxEventRepository repository, Clock clock) {
+        return repository.oldestUnpublishedCreatedAt()
+                .map(oldest -> Duration.between(oldest, clock.instant()).toMillis() / 1000.0)
+                .orElse(0.0);
+    }
+}

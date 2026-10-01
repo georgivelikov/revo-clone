@@ -160,6 +160,13 @@ public class FxQuoteRepository {
                 .optional();
     }
 
+    /** Backs the {@code fx.quote.active.count} gauge (plans/phase-08-load-and-observability.md task 3). */
+    public long countActive() {
+        return jdbcClient.sql("select count(*) from fx_quote where state = 'ACTIVE'")
+                .query(Long.class)
+                .single();
+    }
+
     private static FxQuote mapRow(ResultSet rs, int rowNum) throws SQLException {
         return new FxQuote(
                 rs.getObject("id", UUID.class),

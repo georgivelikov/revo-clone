@@ -128,8 +128,8 @@ class PostingEngineRetryWrapperTest {
         }
 
         @Bean
-        PostingEngine postingEngine(PostingTransactionExecutor executor) {
-            return new PostingEngine(executor, new ChaosLedgerState());
+        PostingEngine postingEngine(PostingTransactionExecutor executor, MeterRegistry meterRegistry) {
+            return new PostingEngine(executor, new ChaosLedgerState(), meterRegistry);
         }
 
         @Bean
