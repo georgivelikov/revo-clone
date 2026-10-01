@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.5",
+  "current": "08.6",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1789,12 +1789,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.5-k6-scripts-with-a-shared-setup-module",
-      "commit": null,
+      "commit": "31b5935",
       "costUsd": 0,
-      "notes": null
+      "notes": "All 5 scripts from the phase's scenario table plus a shared lib/ (config.js, auth.js, setup.js). Smoke-tested every script against the live stack at reduced scale, each to completion at least once. Found and fixed a real design bug while running hotspot.js: the per-VU token cache meant many VUs cycling a small user pool (hotspot.js's whole shape) cold-started simultaneous Keycloak logins under load - token success dropped to 16% with 800 VUs active. Fixed by seeding each user's first token from setup() (which runs once) via getToken(email, password, user.tokenSeed); re-tested at 11 VUs instead of 800 with zero token failures. Also raised setupTimeout from k6's 60s default to 5m (setupUsers() registers users sequentially) and dropped http_req_failed thresholds on hotspot.js and spike.js after confirming their expected outcome IS a high failure rate (45% and 37% respectively in testing) - both scenarios are designed to push the system past where it degrades gracefully. mixed.js's FX slice fails 0/57 as expected, matching docs/failure-modes.md's documented bug - not a script defect. NOTE: this task's commit (31b5935) landed directly on master by mistake before I caught it - corrected by resetting master back to 08.4's tip and moving the work onto this task's own branch before gating, so the branch-per-task record stays consistent; no content was lost or changed. Separately hit the project's known recurring Windows mvn jar-lock issue (an earlier gate attempt's own mvn process stayed alive and held common-money's jar open for the next one) - killed the orphaned java.exe processes by hand and re-ran clean."
     },
     {
       "id": "08.6",
