@@ -1,8 +1,12 @@
-# Scrape config for plans/phase-08-load-and-observability.md. Targets reach every service by
-# its compose DNS name on the internal port - never localhost/127.0.0.1, which would only
-# resolve to Prometheus's own container. Each service's /actuator/prometheus endpoint lands in
-# task 08.2; until then these targets simply show as down in Prometheus's own "Targets" page,
-# which is the expected state for a task-ordered build, not a config error.
+# Scrape config for plans/phase-08-load-and-observability.md. Every target, including
+# Prometheus's own self-scrape, is reached by its compose service name rather than a loopback
+# address - CLAUDE.md rule 9's config-hygiene test (ConfigHygieneTest, platform/common-web) bans
+# that literal text in every *.yml/*.yaml/*.properties file in the repo except a *-local.* file,
+# a test fixture, or a docker-compose*.yml, with no comment carve-out - this file is none of
+# those, so the ban applies to every line, comments included. Each service's
+# /actuator/prometheus endpoint lands in task 08.2; until then the revolut-services job's
+# targets simply show as down on Prometheus's own Targets page, which is the expected state for
+# a task-ordered build, not a config error.
 global:
   scrape_interval: 5s
   evaluation_interval: 5s
@@ -10,10 +14,7 @@ global:
 scrape_configs:
   - job_name: prometheus
     static_configs:
-      # 127.0.0.1, not localhost: this is Prometheus's own container scraping itself over
-      # loopback, same reason docker-compose.infra.yml's Kafka listener uses the numeric form -
-      # CLAUDE.md rule 9's config-hygiene check greps for the literal word, not the concept.
-      - targets: ["127.0.0.1:9090"]
+      - targets: ["prometheus:9090"]
 
   - job_name: revolut-services
     metrics_path: /actuator/prometheus
