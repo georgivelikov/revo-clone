@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.revolutclone.messaging.api.EventPublisher;
 import java.time.Clock;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 /**
  * plans/phase-07-resilience-and-scale.md's {@code outbox.pause} lever, in isolation from the
@@ -24,8 +25,10 @@ class OutboxPublisherChaosTest {
         ChaosOutboxControl chaosOutboxControl = new ChaosOutboxControl();
         chaosOutboxControl.pause();
 
+        @SuppressWarnings("unchecked")
+        ObjectProvider<OutboxPublisher> self = mock(ObjectProvider.class);
         OutboxPublisher publisher = new OutboxPublisher(repository, eventPublisher, Clock.systemUTC(),
-                chaosOutboxControl);
+                chaosOutboxControl, self);
 
         int published = publisher.pollAndPublish(100);
 

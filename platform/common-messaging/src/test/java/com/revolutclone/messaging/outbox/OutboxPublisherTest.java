@@ -78,6 +78,28 @@ class OutboxPublisherTest {
         }
     }
 
+    /**
+     * Task 08.9's adaptive-polling tuning change: a single {@code publishPending()} tick must
+     * drain a backlog bigger than one batch, not just the first 100 rows and then wait a full
+     * second for the next {@code @Scheduled} trigger. 250 rows (two and a half batches of the
+     * hardcoded {@code BATCH_SIZE} of 100) seeded, one tick, every row published - proves the
+     * loop re-polls immediately after a full batch instead of stopping at the first one.
+     */
+    @Test
+    @Timeout(30)
+    void onePublishPendingTickDrainsMoreThanOneBatch() {
+        int seeded = 250;
+        List<Long> seededIds = seedUnpublishedRows(seeded);
+
+        outboxPublisher.publishPending();
+
+        for (Long id : seededIds) {
+            assertThat(repository.findById(id).orElseThrow().getPublishedAt())
+                    .as("row %d must be published after one tick, not left for a later poll", id)
+                    .isNotNull();
+        }
+    }
+
     private List<Long> seedUnpublishedRows(int count) {
         Instant now = Instant.now();
         return java.util.stream.IntStream.range(0, count)
