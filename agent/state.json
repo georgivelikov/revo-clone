@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.8",
+  "current": "08.9",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1843,12 +1843,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.8-hotspot-js",
-      "commit": null,
+      "commit": "e453f46",
       "costUsd": 0,
-      "notes": null
+      "notes": "Real runs: 50 senders, 500 rps, 2 minutes, all transfers targeting one fixed recipient account (60,000 transfers each run), docs/perf-runs/08.8-hotspot.json (single instance) and 08.8-hotspot-scaled.json (3 ledger-service instances). Single-instance run is the headline finding and it is an absence: ledger_optimistic_retries_total stayed at 0 through all 60,000 transfers at 500 rps on one account, 100% success, p95 22.01ms. Root cause: payment.event.v1 is keyed by paymentId (CLAUDE.md rule 5's documented 'usually account id' exception), and with exactly one ledger-service instance running a single-threaded listener (no explicit concurrency configured - confirmed live in docs/failure-modes.md's own log excerpts), every PostingTransactionExecutor call for every partition is already serialized by construction regardless of how many different payments touch the same account or how fast they arrive - optimistic locking exists for genuine concurrent writers, and a lone sequential consumer can never produce the condition it defends against. Scaled to 3 ledger-service instances (phase 07's technique: docker-compose.yml's container_name/static port still block `--scale`, so `docker run` directly on the compose network instead) and re-ran identically: 12 partitions split 4/4/4 across genuinely separate JVMs, so two instances really can pick up two different payments touching the hot account at once. ledger_optimistic_retries_total: 4,045 across the same 60,000 transfers (~6.7% of operations needed at least one retry) but still 100% success, 0 failed transfers; p95 climbed to 82.66ms and max to 959ms (the 20ms/40ms @Retryable backoff showing up directly in tail latency), but PostingEngine's three-attempt retry (task 02.5) absorbed every conflict without a user-visible failure. Zero-sum invariant confirmed holding after both runs. Clean answer to 'worst case for optimistic locking': the mechanism is not needed and does not activate at single-instance scale no matter the load - it only matters once the system is scaled the way phase 07 demonstrated it can be, and when it does matter it works exactly as designed. First gate attempt hit an unrelated, non-reproducible flaky test (api-gateway's GatewayRateLimitTest.burstPastTheLimitReturns429: a real-Redis Testcontainers token-bucket test with replenish-rate=1/sec and burst-capacity=1, inherently timing-sensitive and likely slowed by the machine still warm from this task's own heavy k6/Docker-scaling load) - confirmed not caused by this commit (which touches only two JSON data files) and re-gated green."
     },
     {
       "id": "08.9",
