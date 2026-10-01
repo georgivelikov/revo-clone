@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.6",
+  "current": "08.7",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1807,12 +1807,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.6-baseline-run-at-100-rps-record-it",
-      "commit": null,
+      "commit": "4f36156",
       "costUsd": 0,
-      "notes": null
+      "notes": "Real run: 50 users, 100 rps, 5 min, 30000 transfers (docs/perf-runs/08.6-baseline.json). Accept latency (POST /api/payments) matches the phase's prediction exactly: p95 23.57ms, 0% http_req_failed. Headline finding is the outbox, not the accept path: a domestic transfer writes 1 row on payment-service and 2 on ledger-service (one EntryPostedV1 per posting), so at 100 transfers/sec ledger-service needs ~200 outbox rows/sec but OutboxPublisher's poller (1s fixed delay, 100-row batch) caps at ~100/sec per service - half of what ledger-service needed, and payment-service's own ~100/sec need sat at its ceiling with zero margin. Backlog grew to ~15000 (ledger) / ~7400 (payment) unpublished rows by the end of the run, confirmed directly against outbox_event.published_at in both databases. This is the phase's own predicted bottleneck #3, but sharper than 'caps end-to-end latency at ~500ms': once sustained arrival exceeds the poller's fixed throughput ceiling the backlog grows without bound for as long as the load holds (M/M/1-style), not a flat cap - a transfer accepted near the end of the run would wait minutes to settle, confirmed via the dashboard's end-to-end panel reading p50=p95=p99=30s (histogram's top bucket) right after the run. Zero-sum invariant held throughout; backlog itself drained cleanly to 0 within ~6 minutes once load stopped (no stuck rows, confirmed by direct count), so this is purely a throughput ceiling, not data loss or a stuck poller. Sets up task 08.9 (batch size / poll frequency / adaptive polling) precisely, measured against this run as the 'before'."
     },
     {
       "id": "08.7",
