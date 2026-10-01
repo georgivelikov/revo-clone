@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.10",
+  "current": "08.11",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1879,12 +1879,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.10-2-hour-soak-check-for-leaks-and-drift",
-      "commit": null,
+      "commit": "4b5fe6a",
       "costUsd": 0,
-      "notes": null
+      "notes": "Per the earlier explicit decision to run a shorter soak and document the scale-down: 15 minutes at 100 rps, 50 users, not the plan's literal 2 hours (docs/perf-runs/08.10-soak.json) - the write-up of the scale-down and its reasoning belongs in docs/performance.md per that decision, deferred to task 08.11 alongside the rest of this phase's consolidated findings. 90,000 transfers, accept-path p95 19.87ms, 0.00% http_req_failed - no degradation on the accept path across the full run. Leak check (the soak's actual purpose) is clean: JVM heap on ledger-service and payment-service oscillates in a stable sawtooth band (~60-210MB) for the full 15 minutes with no upward trend, GC pause rate settles to a small flat value after initial warmup (~0.05-0.08% of wall time) and stays flat, HikariCP active connections never exceeds 1-2 out of a pool of 10 the entire run - no leak, no unbounded JVM growth, pool exhaustion never approached. Drift check surfaces something real and continues 08.9's finding rather than contradicting it: outbox backlog stays correctly bounded for the full sustained 15 minutes (tens to low-200s, confirming the 08.9 fix holds over a long run, not just a short burst), but Kafka consumer lag on ledger-service and notification-service grows roughly continuously across the run (ledger: 0->~22000, notification: 0->~64000) because their single-threaded listeners' sustainable throughput (08.9: ~77-90 msgs/sec) is below the 100 rps arrival rate - not a leak, it's 08.9's exposed bottleneck given enough sustained time to show its full shape: the system never reaches true steady state at 100 rps, and end-to-end p95 drifts from ~20s at minute 5 to the Timer's 30s histogram ceiling by minute 15, directly explained by the growing queue rather than anything decaying over time. Zero-sum invariant confirmed holding (0 unbalanced journal entries) and DLT depth zero across every topic after the run. Branch created as task/08.10-2-hour-soak-check-for-leaks-and (truncated) and renamed to match this id's branch field before committing."
     },
     {
       "id": "08.11",
