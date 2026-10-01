@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**")
+                        .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/swagger-ui/**", "/v3/api-docs/**")
                         .permitAll()
                         .requestMatchers("/api/identity/register").permitAll()
                         .requestMatchers("/api/identity/admin/**").hasAuthority("admin")

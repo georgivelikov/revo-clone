@@ -58,6 +58,12 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <!-- Backs /actuator/prometheus - plans/phase-08-load-and-observability.md task 2.
+           Version comes from spring-boot-dependencies via the root parent; never pin it here. -->
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
       <!-- Wraps the Keycloak Admin API call registration makes through IdentityProviderPort -
            plans/phase-07-resilience-and-scale.md's Circuit breakers table names this hop
            explicitly. Version comes from spring-cloud-dependencies, imported at the root;

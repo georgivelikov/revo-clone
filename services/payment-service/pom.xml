@@ -63,6 +63,12 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <!-- Backs /actuator/prometheus - plans/phase-08-load-and-observability.md task 2.
+           Version comes from spring-boot-dependencies via the root parent; never pin it here. -->
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
       <!-- Boot 4.1 splits RestClient's autoconfiguration into its own module and
            spring-boot-starter-web does NOT pull it in, so without this the pre-configured
            RestClient.Builder is not a bean at all. See docs/spring-boot-4-notes.md. payment-service

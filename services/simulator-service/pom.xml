@@ -88,6 +88,12 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <!-- Backs /actuator/prometheus - plans/phase-08-load-and-observability.md task 2.
+           Version comes from spring-boot-dependencies via the root parent; never pin it here. -->
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
       <!-- RestClient.Builder, for CardNetworkPanRestClient. Boot 4.1 split the RestClient
            autoconfiguration into its own module; spring-boot-starter-web carries only the server
            side. See docs/spring-boot-4-notes.md. -->

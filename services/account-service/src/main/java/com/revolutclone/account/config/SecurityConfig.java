@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health/**", "/swagger-ui/**", "/v3/api-docs/**",
+                        .requestMatchers("/actuator/health/**", "/actuator/prometheus", "/swagger-ui/**", "/v3/api-docs/**",
                                 // See InternalVaultAccountController's javadoc: the caller is another
                                 // backend service with no login of its own, and this project has no
                                 // service-to-service identity yet (Phase 07).
