@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.2",
+  "current": "08.3",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1735,12 +1735,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.2-actuator-micrometer-prometheus",
-      "commit": null,
+      "commit": "878d2a9",
       "costUsd": 0,
-      "notes": null
+      "notes": "Added io.micrometer:micrometer-registry-prometheus to all 10 services (already had the actuator starter and the prometheus exposure-include from an earlier phase, but no registry bean to back it). Also added /actuator/prometheus to each service's permitAll list alongside /actuator/health/** - same unauthenticated-by-necessity pattern as the chaos/internal-call endpoints, since Prometheus has no way to present a JWT and this project has no service-to-service identity yet. 9 services needed their own SecurityConfig edited; analytics-service and simulator-service share common-security's default filterChain bean, so one edit there covered both. Verified live: every service's /actuator/prometheus returns 200 with real metrics, Prometheus's targets page shows all 10 revolut-services targets up."
     },
     {
       "id": "08.3",
