@@ -4,6 +4,7 @@ import com.revolutclone.card.domain.CardAuthorization;
 import com.revolutclone.card.domain.CardAuthorizationRepository;
 import com.revolutclone.contracts.DomainEvent;
 import com.revolutclone.messaging.api.OutboxAppender;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +36,13 @@ public class AuthorizationRecorder {
 
     private final CardAuthorizationRepository authorizations;
     private final OutboxAppender outbox;
+    private final MeterRegistry meterRegistry;
 
-    public AuthorizationRecorder(CardAuthorizationRepository authorizations, OutboxAppender outbox) {
+    public AuthorizationRecorder(CardAuthorizationRepository authorizations, OutboxAppender outbox,
+            MeterRegistry meterRegistry) {
         this.authorizations = authorizations;
         this.outbox = outbox;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -48,11 +52,18 @@ public class AuthorizationRecorder {
      * limits" (CLAUDE.md rule 5, and the phase's own justification for it). {@code saveAndFlush} so a
      * resent {@code networkRef} that raced past {@link AuthorizationService}'s own check fails here, on
      * the unique index, rather than at commit with an outbox row already appended.
+     *
+     * <p>{@code card.authorization.decided{outcome}} (plans/phase-08-load-and-observability.md's
+     * dashboard needs an approve/decline ratio) is counted here rather than in
+     * {@link AuthorizationService}, for the same reason the row and the event are written here: this
+     * is the one place every decision - every decline reason, the single approval path - actually
+     * passes through.
      */
     @Transactional
     public void record(CardAuthorization authorization, DomainEvent decision) {
         authorizations.saveAndFlush(authorization);
         outbox.append(CARD_TOPIC, authorization.getCardId().toString(), decision);
+        meterRegistry.counter("card.authorization.decided", "outcome", authorization.getState().name()).increment();
     }
 
     /**
@@ -64,5 +75,6 @@ public class AuthorizationRecorder {
     @Transactional
     public void recordUnknownCard(String networkRef, DomainEvent decision) {
         outbox.append(CARD_TOPIC, networkRef, decision);
+        meterRegistry.counter("card.authorization.decided", "outcome", "DECLINED").increment();
     }
 }

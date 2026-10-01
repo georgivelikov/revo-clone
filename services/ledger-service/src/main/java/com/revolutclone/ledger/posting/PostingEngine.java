@@ -105,6 +105,10 @@ public class PostingEngine {
         this.meterRegistry = meterRegistry;
         this.postingDurationTimer = Timer.builder("ledger.posting.duration")
                 .description("Latency of one PostingTransactionExecutor.postEntry call that returned normally")
+                // plans/phase-08-load-and-observability.md's dashboard needs p50/p95/p99, not just
+                // the mean (sum/count) and max a plain Timer exposes - this publishes the bucket
+                // series histogram_quantile() needs.
+                .publishPercentileHistogram()
                 .register(meterRegistry);
     }
 

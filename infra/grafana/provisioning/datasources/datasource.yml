@@ -6,6 +6,10 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
+    # Fixed rather than auto-generated: task 08.4's dashboard JSON references this UID
+    # directly, and an auto-generated one is not stable across a wiped Grafana volume -
+    # which would defeat "provisioned, not just in Grafana's local state".
+    uid: revolut-prometheus
     access: proxy
     url: http://prometheus:9090
     isDefault: true

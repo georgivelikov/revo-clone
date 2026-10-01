@@ -80,6 +80,10 @@ public class PaymentResultApplier {
         this.clock = clock;
         this.endToEndTimer = Timer.builder("payment.end.to.end")
                 .description("Time from a payment's acceptance to its terminal state (COMPLETED or FAILED)")
+                // plans/phase-08-load-and-observability.md's dashboard needs p50/p95/p99, not just
+                // the mean (sum/count) and max a plain Timer exposes - this publishes the bucket
+                // series histogram_quantile() needs.
+                .publishPercentileHistogram()
                 .register(meterRegistry);
     }
 

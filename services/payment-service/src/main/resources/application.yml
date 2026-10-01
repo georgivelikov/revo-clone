@@ -68,6 +68,14 @@ management:
     health:
       probes:
         enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        # plans/phase-08-load-and-observability.md's Latency row needs p50/p95/p99 for
+        # "accept" (this timer) via histogram_quantile() in Grafana - without this, Spring
+        # Boot's auto-instrumented http.server.requests only publishes count/sum/max, no
+        # bucket series to query percentiles from.
+        "[http.server.requests]": true
 
 logging:
   structured:

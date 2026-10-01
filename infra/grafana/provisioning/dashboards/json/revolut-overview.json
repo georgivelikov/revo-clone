@@ -1,0 +1,174 @@
+{
+  "uid": "revolut-overview",
+  "title": "Revolut Clone — Overview",
+  "description": "plans/phase-08-load-and-observability.md's four rows: Business, Latency, Kafka, Resources. Series split by `service` use the same fixed color per service in every panel it appears in (api-gateway=blue, identity-service=orange, account-service=aqua, ledger-service=yellow, payment-service=magenta, fx-service=green, card-service=violet, analytics-service=red, notification-service=brown, simulator-service=grey) so the eye tracks one service down the page without reading legends.",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "tags": ["revolut", "phase-08"],
+  "panels": [
+    { "id": 100, "type": "row", "title": "Business", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "panels": [] },
+
+    {
+      "id": 1, "type": "timeseries", "title": "Ledger entries: posted by type / rejected by reason",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (type) (rate(ledger_entries_posted_total[1m]))", "legendFormat": "posted: {{type}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } },
+        { "refId": "B", "expr": "sum by (reason) (rate(ledger_entries_rejected_total[1m]))", "legendFormat": "rejected: {{reason}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "FX entries posted (volume)",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(ledger_entries_posted_total{type=\"FX\"}[1m]))", "legendFormat": "FX entries/sec", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Card authorization outcomes",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "APPROVED" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "#0ca30c" } } ] },
+          { "matcher": { "id": "byName", "options": "DECLINED" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "#d03b3b" } } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(card_authorization_decided_total[5m]))", "legendFormat": "{{outcome}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+
+    { "id": 101, "type": "row", "title": "Latency", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }, "panels": [] },
+
+    {
+      "id": 4, "type": "timeseries", "title": "Payment accept latency — POST /api/payments (p50/p95/p99)",
+      "description": "The synchronous part the user waits on: one insert plus one outbox row. Should be single-digit milliseconds.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 0, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/payments\",method=\"POST\"}[5m])) by (le))", "legendFormat": "p50", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/payments\",method=\"POST\"}[5m])) by (le))", "legendFormat": "p95", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/payments\",method=\"POST\"}[5m])) by (le))", "legendFormat": "p99", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Payment end-to-end latency — accept to terminal state (p50/p95/p99)",
+      "description": "What the user perceives, via the WebSocket. The gap between this and accept latency is what asynchrony buys.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 0, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(payment_end_to_end_seconds_bucket[5m])) by (le))", "legendFormat": "p50", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum(rate(payment_end_to_end_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum(rate(payment_end_to_end_seconds_bucket[5m])) by (le))", "legendFormat": "p99", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+
+    { "id": 102, "type": "row", "title": "Kafka", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }, "panels": [] },
+
+    {
+      "id": 6, "type": "timeseries", "title": "Consumer lag by group",
+      "description": "The canonical scaling signal. Broker-side, from kafka-exporter - works identically against MSK later.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [{"matcher": {"id": "byName", "options": "api-gateway"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#2a78d6"}}]}, {"matcher": {"id": "byName", "options": "identity-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eb6834"}}]}, {"matcher": {"id": "byName", "options": "account-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#1baf7a"}}]}, {"matcher": {"id": "byName", "options": "ledger-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eda100"}}]}, {"matcher": {"id": "byName", "options": "payment-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e87ba4"}}]}, {"matcher": {"id": "byName", "options": "fx-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#008300"}}]}, {"matcher": {"id": "byName", "options": "card-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#4a3aa7"}}]}, {"matcher": {"id": "byName", "options": "analytics-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e34948"}}]}, {"matcher": {"id": "byName", "options": "notification-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#8b5a2b"}}]}, {"matcher": {"id": "byName", "options": "simulator-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#6b6b6b"}}]}] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (consumergroup) (clamp_min(kafka_consumergroup_lag, 0))", "legendFormat": "{{consumergroup}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Messages/sec by topic",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset[1m]))", "legendFormat": "{{topic}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "DLT depth by topic",
+      "description": "Must be zero. A nonzero, non-draining depth is a dead letter nobody has looked at.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 60, "pointSize": 5 }, "thresholds": { "mode": "absolute", "steps": [ { "color": "#0ca30c", "value": null }, { "color": "#d03b3b", "value": 1 } ] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "kafka_dlt_depth", "legendFormat": "{{topic}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "DLT messages/sec by topic",
+      "description": "Cumulative, unlike depth - never falls after a replay. A nonzero rate means something is poisoning this topic right now.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "bars", "fillOpacity": 60, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (topic) (rate(kafka_dlt_messages_total[5m]))", "legendFormat": "{{topic}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+
+    { "id": 103, "type": "row", "title": "Resources", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 }, "panels": [] },
+
+    {
+      "id": 10, "type": "timeseries", "title": "JVM heap used by service",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [{"matcher": {"id": "byName", "options": "api-gateway"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#2a78d6"}}]}, {"matcher": {"id": "byName", "options": "identity-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eb6834"}}]}, {"matcher": {"id": "byName", "options": "account-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#1baf7a"}}]}, {"matcher": {"id": "byName", "options": "ledger-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eda100"}}]}, {"matcher": {"id": "byName", "options": "payment-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e87ba4"}}]}, {"matcher": {"id": "byName", "options": "fx-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#008300"}}]}, {"matcher": {"id": "byName", "options": "card-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#4a3aa7"}}]}, {"matcher": {"id": "byName", "options": "analytics-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e34948"}}]}, {"matcher": {"id": "byName", "options": "notification-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#8b5a2b"}}]}, {"matcher": {"id": "byName", "options": "simulator-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#6b6b6b"}}]}] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (service) (jvm_memory_used_bytes{area=\"heap\",job=\"revolut-services\"})", "legendFormat": "{{service}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "GC pause time by service",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [{"matcher": {"id": "byName", "options": "api-gateway"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#2a78d6"}}]}, {"matcher": {"id": "byName", "options": "identity-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eb6834"}}]}, {"matcher": {"id": "byName", "options": "account-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#1baf7a"}}]}, {"matcher": {"id": "byName", "options": "ledger-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eda100"}}]}, {"matcher": {"id": "byName", "options": "payment-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e87ba4"}}]}, {"matcher": {"id": "byName", "options": "fx-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#008300"}}]}, {"matcher": {"id": "byName", "options": "card-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#4a3aa7"}}]}, {"matcher": {"id": "byName", "options": "analytics-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e34948"}}]}, {"matcher": {"id": "byName", "options": "notification-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#8b5a2b"}}]}, {"matcher": {"id": "byName", "options": "simulator-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#6b6b6b"}}]}] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (service) (rate(jvm_gc_pause_seconds_sum{job=\"revolut-services\"}[1m]))", "legendFormat": "{{service}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "DB connection pool utilization by service",
+      "description": "HikariCP active/max. Phase 08's predicted bottleneck #1: default pool size 10 is low for 500 rps.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0, "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [{"matcher": {"id": "byName", "options": "api-gateway"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#2a78d6"}}]}, {"matcher": {"id": "byName", "options": "identity-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eb6834"}}]}, {"matcher": {"id": "byName", "options": "account-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#1baf7a"}}]}, {"matcher": {"id": "byName", "options": "ledger-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#eda100"}}]}, {"matcher": {"id": "byName", "options": "payment-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e87ba4"}}]}, {"matcher": {"id": "byName", "options": "fx-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#008300"}}]}, {"matcher": {"id": "byName", "options": "card-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#4a3aa7"}}]}, {"matcher": {"id": "byName", "options": "analytics-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#e34948"}}]}, {"matcher": {"id": "byName", "options": "notification-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#8b5a2b"}}]}, {"matcher": {"id": "byName", "options": "simulator-service"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#6b6b6b"}}]}] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (service) (hikaricp_connections_active{job=\"revolut-services\"}) / sum by (service) (hikaricp_connections_max{job=\"revolut-services\"})", "legendFormat": "{{service}}", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Ledger optimistic-lock retries/sec",
+      "description": "Contention, not errors - the ledger's main scaling limit. See hotspot.js (task 08.8).",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "datasource": { "type": "prometheus", "uid": "revolut-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10, "pointSize": 5 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(ledger_optimistic_retries_total[1m])", "legendFormat": "retries/sec", "datasource": { "type": "prometheus", "uid": "revolut-prometheus" } }
+      ]
+    }
+  ]
+}
