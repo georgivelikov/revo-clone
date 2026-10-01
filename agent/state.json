@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.4",
+  "current": "08.5",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1771,12 +1771,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.4-grafana-dashboard-json-provisioned",
-      "commit": null,
+      "commit": "38af4ed",
       "costUsd": 0,
-      "notes": null
+      "notes": "One dashboard (infra/grafana/provisioning/dashboards/json/revolut-overview.json, 17 panels: 4 row headers + 13 data panels) covering the phase's four named rows. Prometheus datasource given a fixed uid (revolut-prometheus) so the dashboard JSON can reference it deterministically across a wiped Grafana volume. Per-service color consistency via field overrides on every panel split by service or consumergroup (10-color mapping, documented in the dashboard's own description). Found and fixed two gaps while wiring real queries against the live stack: neither Timer from 08.3 called publishPercentileHistogram() (added to both; histogram_quantile() had nothing to query), and payment-service never enabled percentiles-histogram for Spring's auto http.server.requests meter (added for that one meter) - both needed for the Latency row's p50/p95/p99 panels. Also added card.authorization.decided{outcome} in AuthorizationRecorder - no metric existed anywhere for the Business row's card approve/decline panel, which the phase names explicitly; one counter call in the single place every decision already passes through covers approve, every decline reason, and the no-row unknown-card case. Clamped the consumer-lag query (clamp_min) after discovering kafka-exporter's -1 sentinel for data-less partitions was corrupting the per-group sum into negative lag. Verified live: dashboard loads via Grafana's API with all 17 panels; JVM heap by service returns 10 series; consumer lag by group returns 7; a real transfer populates payment_end_to_end_seconds_count and the p95 query returns a real value."
     },
     {
       "id": "08.5",
