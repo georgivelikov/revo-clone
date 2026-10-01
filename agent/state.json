@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "08.1",
+  "current": "08.2",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1717,12 +1717,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/08.1-docker-compose-obs-yml",
-      "commit": null,
+      "commit": "3a93ccc",
       "costUsd": 0,
-      "notes": null
+      "notes": "docker-compose.obs.yml overlay (Prometheus, Grafana, kafka-exporter, postgres-exporter), with Grafana's datasource and dashboard-provider config provisioned from infra/grafana/provisioning/ rather than clicked through the UI. First gate attempt failed check 3: platform/common-web's ConfigHygieneTest bans localhost/127.0.0.1 in any *.yml/*.yaml/*.properties outside a *-local.* file/test fixture/docker-compose*.yml, with no comment exception (stricter than tripwire.ps1's grep) - infra/prometheus/prometheus.yml's self-scrape target and its explanatory comments both tripped it. Fixed by self-scraping via Prometheus's own compose service name (prometheus:9090) instead of a loopback address. Verified live: all four containers healthy, Grafana's provisioned Prometheus datasource present via its API, Prometheus's targets page shows kafka/postgres/prometheus up and the ten revolut-services targets down (expected until task 08.2)."
     },
     {
       "id": "08.2",
