@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "07.10",
+  "current": "08.1",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1699,12 +1699,12 @@
       ],
       "tests": [],
       "lastInPhase": true,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/07.10-run-the-failure-experiments-write-up",
-      "commit": null,
+      "commit": "0a52c44",
       "costUsd": 0,
-      "notes": null
+      "notes": "Ran all 11 experiments by hand against the real docker-compose stack (rebuilt from 07.1-07.9's code, new docker-compose.chaos.yml overlay activating the chaos profile) and wrote docs/failure-modes.md with real observations. Major finding: CLAUDE.md's and agent/gate.ps1's ledger invariant SQL references a nonexistent table (ledger_entry/transaction_id - real schema is journal_entry/posting), confirmed directly against Postgres - check 6 has silently reported n/a on every gate run since phase 02 because of it; gate.ps1 is protected (rule 12) so this is documented, not fixed, and every invariant check in this task used the corrected query directly. Bigger finding: IdempotentHandler's dedup-insert commits in its own REQUIRES_NEW transaction before the delegate runs, and RetryTopicRelay republishes with the same eventId unchanged, so any transient failure that should retry gets silently swallowed on redelivery (marked processed without ever posting) - reproduced three independent ways (a mid-handler kill, a fail-rate injection, and once on its own during a real ledger rebalance under load). Not fixed - cross-cutting change to every consumer in the project, flagged for a dedicated task. Two narrower, independent bugs found and fixed so the relevant experiments could run at all: infra/kafka/create-topics.sh's retry/DLT topics were never applied to this long-lived broker (ran tasks.ps1 topics), and payment-service was missing FX_BASE_URL entirely, breaking every cross-currency transfer unconditionally regardless of fx-service's health (added the env var to docker-compose.yml, matching the existing simulator-service/card-service pattern). ledger-service could not be scaled via `docker compose up --scale` as committed (container_name + static port both conflict across replicas, exactly the command the phase's own design section prescribes) - worked around with manual `docker run` for this session; once replicas existed, scaling itself worked correctly (4/4/4 split, clean rebalance to 6/6 on a kill, CooperativeStickyAssignor confirmed live in the logs, no duplicate postings). Zero-sum invariant held through every experiment - all failures found are availability failures, not correctness failures. Ran agent/gate.ps1 -TaskId 07.10: GATE GREEN, mvn clean verify green, tripwire clean, 668 tests (no test changes this task - pure infra/config/docs), phase verification green (containers healthy, topics present, config hygiene clean)."
     },
     {
       "id": "08.1",
