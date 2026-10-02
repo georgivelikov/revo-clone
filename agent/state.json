@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.1",
+  "current": "09.2",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1915,12 +1915,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.1-multi-stage-layered-dockerfiles-for",
-      "commit": null,
+      "commit": "6d0787d",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done in an interactive session, not via agent/run.ps1. All 11 Dockerfiles (10 services + web) were already multi-stage but deliberately minimal placeholders explicitly pointing at this task; replaced the single fat-jar COPY with Boot's layered-jar extraction (`-Djarmode=tools -jar app.jar extract --layers --destination extracted`, then one COPY per layer: dependencies, spring-boot-loader, snapshot-dependencies, application). Verified against docs.spring.io that the jarmode is `tools` in Boot 4.1.1, not `layertools` as the phase file's own Design detail section says (that name is stale pre-3.3 wording) - recorded in docs/spring-boot-4-notes.md with the source URL. Verified empirically by building services/account-service's image and running the extracted application.jar directly: it starts, logs structured JSON, and reaches Spring context init identically to the old single-stage image (fails only on a missing OIDC_ISSUER_URI env var, expected outside docker-compose - that's task 09.2's job). web/Dockerfile already had correct npm-dependency-layer-before-source-layer caching; only its stale 'Phase 09 TODO' comment needed updating. Gate green (`agent/gate.ps1 -TaskId 09.1`): tripwire clean, mvn clean verify green, 669 tests (no drop)."
     },
     {
       "id": "09.2",
