@@ -1,5 +1,5 @@
-# See services/api-gateway/Dockerfile for the rationale (minimal, Phase-09 does the real
-# multi-stage layered build). Build context is the repo root.
+# Multi-stage, layered build - see services/api-gateway/Dockerfile for the full rationale.
+# Build context is the repo root.
 FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /workspace
 COPY pom.xml .
@@ -7,8 +7,16 @@ COPY platform platform
 COPY services services
 RUN mvn -q -pl services/card-service -am -DskipTests package
 
+FROM eclipse-temurin:25-jre AS extract
+WORKDIR /builder
+COPY --from=build /workspace/services/card-service/target/*.jar application.jar
+RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
+
 FROM eclipse-temurin:25-jre
-WORKDIR /app
-COPY --from=build /workspace/services/card-service/target/*.jar app.jar
+WORKDIR /application
+COPY --from=extract /builder/extracted/dependencies/ ./
+COPY --from=extract /builder/extracted/spring-boot-loader/ ./
+COPY --from=extract /builder/extracted/snapshot-dependencies/ ./
+COPY --from=extract /builder/extracted/application/ ./
 EXPOSE 8086
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "application.jar"]

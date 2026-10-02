@@ -1,6 +1,8 @@
-# Multi-stage: build the static Vite bundle, then serve it from a minimal nginx image. Real
-# caching/layering polish is a Phase 09 item (plans/phase-09-polish.md task 09.1), same as
-# every backend Dockerfile in this repo - see services/api-gateway/Dockerfile for the rationale.
+# Multi-stage: build the static Vite bundle, then serve it from a minimal nginx image. The
+# layering equivalent of the backend services' jarmode split (services/api-gateway/Dockerfile)
+# is the COPY order below: package.json/package-lock.json are copied and `npm ci` run before
+# the rest of the source is copied in, so the node_modules layer only invalidates when a
+# dependency changes, not on every source edit.
 #
 # Vite inlines VITE_* variables into the bundle at build time, not at container start, so they
 # arrive here as build args rather than as `environment:` in docker-compose.yml the way every

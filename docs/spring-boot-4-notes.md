@@ -789,6 +789,38 @@ something `common-messaging` has to wire up: as long as graceful shutdown is ena
 timeout long enough for the current record to finish, Kafka listener containers stop cleanly
 before the DB pool underneath them goes away.
 
+## Layered jar extraction: the jarmode is `tools`, not `layertools` - `plans/phase-09-polish.md`'s own wording is stale
+
+Source: <https://docs.spring.io/spring-boot/reference/packaging/container-images/dockerfiles.html>
+(rendered page quoted verbatim for task 09.1). `plans/phase-09-polish.md`'s Design detail section
+says "A layered Spring Boot image (`layertools`)" - that was the Boot 2.x/3.x-era jarmode name.
+Boot 4.1.1 renamed it to `tools`; `-Djarmode=layertools -jar app.jar` is simply the wrong jarmode
+name on 4.1.1 (no deprecation warning documented - the docs page only describes `tools`).
+
+```
+java -Djarmode=tools -jar application.jar extract --layers --destination extracted
+```
+
+produces `extracted/dependencies/`, `extracted/spring-boot-loader/`, `extracted/snapshot-dependencies/`
+and `extracted/application/`. `--layers` is required - without it `extract` unpacks the jar flat
+instead of into these four directories. Each directory becomes its own `COPY --from=` step in the
+runtime stage, poorest-to-most-frequently-changing order (dependencies first, application last), so
+a code-only rebuild only invalidates the `application` Docker layer.
+
+**The `application` layer's root is an `application.jar` that is itself thin** - it references the
+classes/resources unpacked into the other three layers rather than duplicating them - so the final
+`ENTRYPOINT` is `["java", "-jar", "application.jar"]` against *that* jar, not the original fat jar
+copied into the builder stage and not a `JarLauncher` class reference (there is no `JarLauncher`
+invocation in the current docs example at all - that pattern is from an older Boot line). The
+`WORKDIR` the four layers get COPYed into (`/application` in the reference example, matched in this
+project's Dockerfiles) must be the same directory the `ENTRYPOINT`'s relative `application.jar` path
+resolves against.
+
+This project keeps `eclipse-temurin:25-jre` as the runtime base (already used project-wide) rather
+than the docs example's `bellsoft/liberica-openjre-debian:25-cds` - only the jarmode command and the
+layer directory names are authoritative from the docs; the base image is this project's own existing
+pin, unrelated to the jarmode mechanism.
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:
