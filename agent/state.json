@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.4",
+  "current": "09.5",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1969,12 +1969,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.4-seed-generator-via-public-apis",
-      "commit": null,
+      "commit": "7bfa0fa",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively, two commits (cf13987 + 7bfa0fa). tools/seed/seed.ps1 reconciles alice/bob/carol/dan@demo.io (carol/dan added to infra/keycloak/revolut-realm.json), funds EUR/GBP/USD, seeds ~150 card txns across Alice/Bob, a handful of P2P transfers, several FX exchanges, exactly two budgets and two vaults, then asserts the zero-sum invariant. Verified idempotent across 3 consecutive runs against a freshly-reset stack. Along the way found and fixed two real, pre-existing bugs that blocked this from ever working end to end: (1) revolut.messaging.retry.topics was never configured in ANY service (RetryTopicRelay never relayed a single escalated message back to its main topic, project-wide, since forever) - fixed for the 6 services that needed it (cf13987) plus card-service and analytics-service inline in 7bfa0fa; (2) card-service's LedgerReservationsRestClient had no service-to-service identity for its Kafka-consumer-triggered ledger calls (a documented Phase 07 gap) - fixed with ServiceAccountTokenProvider (platform/common-security), a client-credentials fallback reusing the realm's existing revolut-backend client. One known residual: one of Bob's 3 seeded FX exchanges leaves its quote CONSUMED but never posts - a narrower retry-relay reliability gap under cold multi-service restart, documented in the commit rather than chased further. Gate green: tripwire clean, mvn clean verify green, 669 tests."
     },
     {
       "id": "09.5",
