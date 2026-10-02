@@ -58,6 +58,26 @@ services:
       retries: 15
       start_period: 20s
 
+  # One-shot: creates the full topic catalogue (idempotent --if-not-exists) once Kafka is
+  # healthy, then exits 0. Without this, `docker compose up -d` brought up a broker with no
+  # topics at all - auto.create.topics.enable is deliberately false (see kafka's own comment
+  # above) - and every service's first produce/consume raced a manual `tasks.ps1 topics` run.
+  # `restart: "no"` (the Compose default, stated explicitly) keeps it a run-once job: it is
+  # meant to exit, not be restarted into a crash loop. Reuses the broker's own image so
+  # kafka-topics.sh is already on PATH, rather than pulling anything extra.
+  kafka-topics-init:
+    image: apache/kafka:3.9.0
+    container_name: revolut-kafka-topics-init
+    restart: "no"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVER: kafka:19092
+    volumes:
+      - ./infra/kafka/create-topics.sh:/create-topics.sh:ro
+    entrypoint: ["bash", "/create-topics.sh"]
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: revolut-kafka-ui
