@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.2",
+  "current": "09.4",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1933,12 +1933,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.2-full-docker-compose-yml-with-real",
-      "commit": null,
+      "commit": "9ad6c1f",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. Healthchecks/service_healthy ordering were already in place from earlier phases; the real gaps were a missing one-shot kafka-topics-init container (docker-compose.infra.yml, so `docker compose up -d` alone creates the topic catalogue instead of needing a separate `tasks.ps1 topics` step) with every Kafka-touching service gated on it via service_completed_successfully, git-SHA image tagging (${GIT_SHA:-dev}) on every service, and a missing healthcheck on `web`. Verified by bringing the full stack up for real (10 services + web + 5 infra containers, GIT_SHA exported) and confirming every container reports healthy. Gate green: tripwire clean, mvn clean verify green, 669 tests."
     },
     {
       "id": "09.3",
@@ -1951,12 +1951,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.3-verify-cold-start-under-3-minutes-fix",
-      "commit": null,
+      "commit": "b15fa7c",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. Timed `docker compose up -d` (images already built, GIT_SHA exported) from invocation to return - 128 seconds, under the 3-minute budget, every container healthy, nothing waiting on a fixed sleep. 09.2's ordering was already sufficient; nothing needed fixing. Recorded in docs/performance.md as a new dated section. Gate green: tripwire clean, mvn clean verify green, 669 tests."
     },
     {
       "id": "09.4",
