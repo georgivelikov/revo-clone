@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.5",
+  "current": "09.6",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -1987,12 +1987,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.5-tasks-ps1-demo-scripted-walkthrough",
-      "commit": null,
+      "commit": "c6a9acc",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. `tasks.ps1 demo` / `demo --no-pause`: 7 narrated steps (fund, transfer, exchange, card spend, advance clock, settle, dashboard) against alice@demo.io/carol@demo.io, each money-moving call using a fresh GUID Idempotency-Key since a demo should produce new visible activity every run, not converge like `seed` does. Verified by running it 3 times live end to end; fixed a real bug found on the 2nd run (the printed dashboard showed the previous run's stale GBP balance because the exchange step didn't wait for its own async posting - added a 10s poll, same pattern as seed.ps1's Wait-ForBalanceIncrease). Gate green: tripwire clean, mvn clean verify green, 669 tests."
     },
     {
       "id": "09.6",
