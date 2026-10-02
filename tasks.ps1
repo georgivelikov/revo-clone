@@ -47,10 +47,20 @@ See plans/phase-00-foundations.md §Verification and §Risks & gotchas.
                                  throwaway consumer group, never the real one. Needs a registered
                                  seed user (`tasks.ps1 seed`) for its bearer token, same as the
                                  funding calls `seed` itself makes against ledger-service.
+  tasks.ps1 demo                plans/phase-09-polish.md task 09.5: a scripted walkthrough you
+                                 narrate live - fund, transfer, exchange, card spend, advance
+                                 clock, settle, show the dashboard - pausing for Enter between
+                                 each step. Run `tasks.ps1 seed` first (needs alice@demo.io and
+                                 carol@demo.io to already exist with wallets). Every step uses a
+                                 fresh Idempotency-Key, unlike `seed` - a demo is meant to produce
+                                 new, visible activity on every run, not converge to one state.
+  tasks.ps1 demo --no-pause     the same walkthrough with no Read-Host pauses, for an unattended
+                                 run (plans/phase-09-polish.md's own Done-when: "the demo script
+                                 runs end to end unattended").
 #>
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [ValidateSet('up', 'down', 'reset', 'logs', 'psql', 'topics', 'seed', 'analytics-rebuild', 'point-in-time')]
+    [ValidateSet('up', 'down', 'reset', 'logs', 'psql', 'topics', 'seed', 'analytics-rebuild', 'point-in-time', 'demo')]
     [string] $Command,
 
     [Parameter(Position = 1)]
@@ -74,6 +84,7 @@ $composeServices = @('-f', 'docker-compose.infra.yml', '-f', 'docker-compose.yml
 
 $Describe    = $Rest -contains '--describe'
 $Follow      = ($Rest -contains '--follow') -or ($Rest -contains '-f')
+$NoPause     = $Rest -contains '--no-pause'
 
 $knownDbs = @('identity', 'account', 'ledger', 'payment', 'fx', 'card', 'analytics', 'notification')
 
@@ -92,6 +103,7 @@ function Get-TopicNames {
 
 $gatewayBase   = 'http://localhost:8080'
 $ledgerBase    = 'http://localhost:8083'
+$simulatorBase = 'http://localhost:8089'
 $tokenEndpoint = 'http://localhost:8180/realms/revolut/protocol/openid-connect/token'
 
 function Get-SeedAccessToken([string] $Email, [string] $Password) {
@@ -196,6 +208,128 @@ function Invoke-PointInTimeQuery([string] $Timestamp) {
         Format-Table -AutoSize | Out-String | Write-Host
 }
 
+# plans/phase-09-polish.md task 09.5. Narrated, not idempotent by design - unlike `seed`, a demo
+# is supposed to produce new, visible activity every time it runs, so every money-moving call
+# below gets a FRESH Idempotency-Key (a GUID), never a fixed one. Needs `tasks.ps1 seed` to have
+# run at least once already (alice@demo.io and carol@demo.io must already have EUR wallets).
+function Wait-ForDemoStep([string] $Step, [string] $Narration) {
+    Say "$Step - $Narration"
+    if (-not $NoPause) {
+        Write-Host '[tasks]   press Enter to continue...' -ForegroundColor DarkGray
+        [void] (Read-Host)
+    }
+}
+
+function Get-DemoWallet([hashtable] $AuthHeader, [string] $Currency) {
+    $accounts = Invoke-RestMethod -Method Get -Uri "$gatewayBase/api/accounts/me" -Headers $AuthHeader
+    $wallet = @($accounts) | Where-Object { $_.currency -eq $Currency -and $_.type -eq 'WALLET' } | Select-Object -First 1
+    if (-not $wallet) { Die "no $Currency wallet for this user - run `"tasks.ps1 seed`" first" }
+    return $wallet
+}
+
+function Get-DemoBalance([hashtable] $AuthHeader, [System.Guid] $LedgerAccountId) {
+    return Invoke-RestMethod -Method Get -Uri "$ledgerBase/internal/ledger/accounts/$LedgerAccountId/balance" -Headers $AuthHeader
+}
+
+function Invoke-Demo {
+    try {
+        $aliceToken = Get-SeedAccessToken -Email 'alice@demo.io' -Password 'demo'
+        $carolToken = Get-SeedAccessToken -Email 'carol@demo.io' -Password 'demo'
+    } catch {
+        Die "could not log in as the demo users - run `"tasks.ps1 seed`" first. Underlying error: $($_.Exception.Message)"
+    }
+    $aliceAuth = @{ Authorization = "Bearer $aliceToken" }
+    $carolAuth = @{ Authorization = "Bearer $carolToken" }
+
+    $aliceEur = Get-DemoWallet -AuthHeader $aliceAuth -Currency 'EUR'
+    $aliceGbp = Get-DemoWallet -AuthHeader $aliceAuth -Currency 'GBP'
+    $carolEur = Get-DemoWallet -AuthHeader $carolAuth -Currency 'EUR'
+
+    Say 'Revolut clone demo - 7 steps, narrate each one as it happens.'
+
+    Wait-ForDemoStep '1/7 FUND' "topping up Alice's EUR wallet by EUR 25.00..."
+    $before = Get-DemoBalance -AuthHeader $aliceAuth -LedgerAccountId $aliceEur.ledgerAccountId
+    Invoke-RestMethod -Method Post -Uri "$ledgerBase/internal/ledger/admin/fund/$($aliceEur.ledgerAccountId)" `
+        -ContentType 'application/json' -Body (@{ amountMinor = 2500; currency = 'EUR' } | ConvertTo-Json) `
+        -Headers $aliceAuth | Out-Null
+    $after = Get-DemoBalance -AuthHeader $aliceAuth -LedgerAccountId $aliceEur.ledgerAccountId
+    Say "  Alice's EUR balance: $($before.availableMinor) -> $($after.availableMinor) minor units"
+
+    Wait-ForDemoStep '2/7 TRANSFER' 'Alice sends Carol EUR 10.00...'
+    $carolBefore = Get-DemoBalance -AuthHeader $carolAuth -LedgerAccountId $carolEur.ledgerAccountId
+    Invoke-RestMethod -Method Post -Uri "$gatewayBase/api/payments" -ContentType 'application/json' -Body (@{
+        sourceAccountId = $aliceEur.id
+        targetAccountId = $carolEur.id
+        amountMinor     = 1000
+        currency        = 'EUR'
+        reference       = 'Demo transfer'
+    } | ConvertTo-Json) -Headers (@{ Authorization = $aliceAuth.Authorization; 'Idempotency-Key' = [Guid]::NewGuid().ToString() }) | Out-Null
+    Say '  payment accepted (202) - settles asynchronously, same as the real app.'
+
+    Wait-ForDemoStep '3/7 EXCHANGE' 'Alice exchanges EUR 15.00 for GBP...'
+    $quote = Invoke-RestMethod -Method Post -Uri "$gatewayBase/api/fx/quotes" -ContentType 'application/json' -Body (@{
+        sellCurrency = 'EUR'
+        buyCurrency  = 'GBP'
+        sellMinor    = 1500
+    } | ConvertTo-Json) -Headers (@{ Authorization = $aliceAuth.Authorization; 'Idempotency-Key' = [Guid]::NewGuid().ToString() })
+    Say "  quoted: sell 1500 EUR-minor for $($quote.buyMinor) GBP-minor at $($quote.clientRate) (fee $($quote.feeMinor))"
+    $gbpBeforeExchange = (Get-DemoBalance -AuthHeader $aliceAuth -LedgerAccountId $aliceGbp.ledgerAccountId).availableMinor
+    Invoke-RestMethod -Method Post -Uri "$gatewayBase/api/fx/quotes/$($quote.quoteId)/execute" `
+        -Headers (@{ Authorization = $aliceAuth.Authorization; 'Idempotency-Key' = [Guid]::NewGuid().ToString() }) | Out-Null
+    # Posts off the back of a Kafka event, same as the transfer above - give it a few seconds so
+    # step 7's dashboard snapshot reflects this run's own exchange rather than a stale balance.
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        if ((Get-DemoBalance -AuthHeader $aliceAuth -LedgerAccountId $aliceGbp.ledgerAccountId).availableMinor -gt $gbpBeforeExchange) { break }
+        Start-Sleep -Milliseconds 500
+    }
+    Say '  exchange executed - the hold is captured into a posted FX entry off the back of this.'
+
+    Wait-ForDemoStep '4/7 CARD SPEND' "issuing Alice a card and tapping it at a merchant..."
+    $existingCards = Invoke-RestMethod -Method Get -Uri "$gatewayBase/api/cards" -Headers $aliceAuth
+    $existingCards = @($existingCards)
+    if ($existingCards.Count -gt 0) {
+        $cardId = $existingCards[0].id
+        Say "  reusing existing card $cardId"
+    } else {
+        $card = Invoke-RestMethod -Method Post -Uri "$gatewayBase/api/cards" -ContentType 'application/json' -Body (@{
+            accountId = $aliceEur.id
+            type      = 'VIRTUAL'
+            label     = 'Demo card'
+            pin       = '1234'
+        } | ConvertTo-Json) -Headers $aliceAuth
+        $cardId = $card.id
+        Say "  issued card $cardId"
+    }
+    $spend = Invoke-RestMethod -Method Post -Uri "$simulatorBase/simulator/cards/spend" -ContentType 'application/json' `
+        -Body (@{ cardId = $cardId } | ConvertTo-Json)
+    Say "  authorized $($spend.amountMinor) $($spend.currency) at $($spend.merchantName) (networkRef $($spend.networkRef))"
+
+    Wait-ForDemoStep '5/7 ADVANCE CLOCK' "advancing the simulator's clock so the tap settles..."
+    for ($i = 0; $i -lt 2; $i++) {
+        Invoke-RestMethod -Method Post -Uri "$simulatorBase/simulator/clock/advance-day" | Out-Null
+    }
+    Say '  clock advanced - the settlement batch for today has gone out.'
+
+    Wait-ForDemoStep '6/7 SETTLE' 'checking the authorization settled...'
+    $deadline = (Get-Date).AddSeconds(15)
+    $settled = $false
+    while ((Get-Date) -lt $deadline) {
+        $auths = Invoke-RestMethod -Method Get -Uri "$gatewayBase/api/cards/$cardId/authorizations" -Headers $aliceAuth
+        $match = @($auths) | Where-Object { $_.networkRef -eq $spend.networkRef } | Select-Object -First 1
+        if ($match -and $match.state -eq 'SETTLED') { $settled = $true; break }
+        Start-Sleep -Milliseconds 500
+    }
+    if ($settled) { Say '  settled.' } else { Warn '  still pending after 15s - the Activity screen will catch up shortly.' }
+
+    Wait-ForDemoStep '7/7 DASHBOARD' 'here is what changed - switch to the browser now.'
+    $finalEur = Get-DemoBalance -AuthHeader $aliceAuth -LedgerAccountId $aliceEur.ledgerAccountId
+    $finalGbp = Get-DemoBalance -AuthHeader $aliceAuth -LedgerAccountId $aliceGbp.ledgerAccountId
+    Say "  Alice: EUR $($finalEur.availableMinor) minor, GBP $($finalGbp.availableMinor) minor available"
+    Say '  Open http://localhost:5173 and log in as alice@demo.io / demo to see the Home, Activity and Exchange screens update.'
+    Say 'Demo complete.'
+}
+
 Push-Location $repo
 try {
     switch ($Command) {
@@ -285,6 +419,10 @@ try {
 
         'point-in-time' {
             Invoke-PointInTimeQuery -Timestamp $Target
+        }
+
+        'demo' {
+            Invoke-Demo
         }
     }
 }
