@@ -77,11 +77,50 @@
       "realmRoles": ["customer"]
     },
     {
+      "username": "carol@demo.io",
+      "email": "carol@demo.io",
+      "firstName": "Carol",
+      "lastName": "Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "demo", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
+      "username": "dan@demo.io",
+      "email": "dan@demo.io",
+      "firstName": "Dan",
+      "lastName": "Demo",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "demo", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
       "username": "service-account-revolut-backend",
       "enabled": true,
       "serviceAccountClientId": "revolut-backend",
       "clientRoles": {
         "realm-management": ["manage-users", "view-realm"]
+      }
+    },
+    {
+      "username": "seed-operator@revolutclone.local",
+      "email": "seed-operator@revolutclone.local",
+      "firstName": "Seed",
+      "lastName": "Operator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "SeedOperator1!", "temporary": false }
+      ],
+      "realmRoles": ["admin"],
+      "attributes": {
+        "description": ["tool-only identity (tools/seed/seed.ps1) for admin-authority endpoints such as POST /api/identity/admin/reconcile - never a demo login"]
       }
     }
   ]

@@ -821,6 +821,14 @@ than the docs example's `bellsoft/liberica-openjre-debian:25-cds` - only the jar
 layer directory names are authoritative from the docs; the base image is this project's own existing
 pin, unrelated to the jarmode mechanism.
 
+## Jackson 3's annotations module kept the Jackson 2 coordinate and package - `com.fasterxml.jackson.annotation`, not `tools.jackson.*`
+
+Source: `jackson-bom-3.1.5.pom` (resolved locally) declares `jackson-annotations` under `<groupId>com.fasterxml.jackson.core</groupId>`, pinned to `<jackson.version.annotations>2.21</jackson.version.annotations>` - a 2.x version number, even though it is the annotations module `jackson-core`/`jackson-databind` 3.1.5 (both renamed to the `tools.jackson` groupId and package root) actually use. Confirmed by unzipping `jackson-annotations-2.21.jar`: `@JsonProperty` is at `com/fasterxml/jackson/annotation/JsonProperty.class` - there is no `tools.jackson.annotation` package at all; `jackson-core`/`jackson-databind` 3.1.5 were searched directly and contain no basic annotations (`databind`'s own `tools.jackson.databind.annotation.*` package only has databind-specific ones like `@JsonDeserialize`/`@JsonSerialize`, not `@JsonProperty`/`@JsonIgnore`/etc.).
+
+**This is the one legitimate exception to this file's "any import beginning `com.fasterxml.jackson` is a mistake" rule (see the Jackson 3 section above).** `@JsonProperty`, `@JsonIgnore`, `@JsonCreator` and the rest of the basic annotation set stay at their Jackson-2-era package; only the data-binding engine (`ObjectMapper`/`JsonMapper`, `JsonNode`, etc.) moved. Needed for task 09.4's `ServiceAccountTokenProvider` (`platform/common-security`), to map Keycloak's snake_case token-endpoint response (`access_token`, `expires_in`) onto a camelCase record without registering a naming-strategy module on the shared `JsonMapper` bean.
+
+**In practice, use the `JsonNode` tree-read idiom instead where it's an option, and skip the import entirely.** `agent/tripwire.ps1` (permission-denied, cannot be edited) greps for any `com.fasterxml.jackson` import and cannot tell this legitimate case from the Jackson-2 mistake it exists to catch, so `@JsonProperty` here is a guaranteed tripwire violation regardless of correctness. `ServiceAccountTokenProvider` ended up reading the response as a `JsonNode` and pulling `access_token`/`expires_in` by their literal names - the same idiom `EventTypeRouter` already uses - specifically to avoid needing the annotation at all. Reach for `@JsonProperty` only when a tree read genuinely will not do (e.g. deserializing into a type a library API requires by class, not a value you parse yourself).
+
 ## Still to verify when first needed
 
 Append here as these get settled, with sources:

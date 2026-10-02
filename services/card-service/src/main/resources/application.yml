@@ -39,6 +39,33 @@ spring:
 revolut:
   security:
     roles-claim: ${ROLES_CLAIM:realm_access.roles}
+    # A client-credentials identity for the one call this service makes with no live user JWT
+    # on the thread: LedgerReservationsRestClient's hold/settle/release/expire, decided from a
+    # Kafka consumer. Reuses the realm's existing confidential `revolut-backend` client
+    # (already provisioned for identity-service's Keycloak admin calls) rather than minting a
+    # new one - see ServiceAccountTokenProvider's javadoc (platform/common-security, task 09.4).
+    service-account:
+      # Empty fallbacks, not left bare: @ConditionalOnProperty resolves this exact property's
+      # value eagerly (SecurityAutoConfiguration#serviceAccountTokenProvider), and a bare
+      # ${KEYCLOAK_ADMIN_CLIENT_ID} with no env var set (every unit/slice test here - none sets
+      # Keycloak env vars) throws PlaceholderResolutionException at that resolution, not a clean
+      # "property absent" - which fails EVERY test's context load, not just this bean's. Found
+      # live, task 09.4, 98 card-service test errors from one unguarded placeholder.
+      token-uri: ${KEYCLOAK_SERVER_URL:}/realms/${KEYCLOAK_REALM:}/protocol/openid-connect/token
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:}
+      client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  # Without this, a message escalated to <topic>.retry-5s by the shared DefaultErrorHandler
+  # (common-messaging's KafkaErrorHandlingConfig) sits there forever: RetryTopicRelay only
+  # relays topics it is told about (RetryTopicProperties defaults to empty on purpose - see its
+  # own javadoc), and nothing escalates it for a consumer that was never configured. Found live,
+  # task 09.4: every one of this service's three consumers hit this, including a genuinely
+  # transient one (a brand-new account's funding_account read-model row racing the first
+  # authorization against it) - account.account.v1, card.authorization.v1 and ledger.entry.v1
+  # all need to be named here, matching the topics CardAuthorizationKafkaListener,
+  # AccountKafkaListener and LedgerEntryKafkaListener actually consume.
+  messaging:
+    retry:
+      topics: [account.account.v1, card.authorization.v1, ledger.entry.v1]
   card:
     crypto:
       # AES-256 key (pan/cvv at rest) and HMAC-SHA256 key (pan_hash lookup), each a base64-encoded

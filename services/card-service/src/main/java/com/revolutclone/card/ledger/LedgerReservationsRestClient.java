@@ -1,9 +1,11 @@
 package com.revolutclone.card.ledger;
 
+import com.revolutclone.security.api.ServiceAccountTokenProvider;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -24,16 +26,15 @@ import org.springframework.web.client.RestClient;
  * 4.1's {@code spring-boot-restclient} module, which {@code spring-boot-starter-web} does
  * <em>not</em> pull in - see docs/spring-boot-4-notes.md.
  *
- * <p><strong>Authentication is a known gap, and it is deliberate that it fails loudly rather than
- * quietly.</strong> Unlike fx-service's quoting path, which runs inside an HTTP request and can relay
- * the caller's own token, an authorization is decided from a Kafka consumer: there is no user in the
- * picture at all, and this project has no client-credentials identity for service-to-service calls
- * yet (a Phase 07 concern, same note fx-service's release path carries). The relay below therefore
- * finds a token only when something drives this from a request thread. Until a service identity
- * exists, the ledger answers 401 to a hold from the consumer, and this maps that to
- * {@link LedgerUnavailableException} - the message is retried, and nobody is told their good card was
- * declined. Treating it as a decline would be the worst of the available options: wrong, final, and
- * visible to the holder.
+ * <p><strong>Authentication from a Kafka consumer thread.</strong> Unlike fx-service's quoting path,
+ * which runs inside an HTTP request and can relay the caller's own token, an authorization is decided
+ * from a Kafka consumer: there is no user in the picture at all, so {@link #currentBearerToken()}
+ * falls back to {@link ServiceAccountTokenProvider} - a client-credentials token against the realm's
+ * existing confidential client - whenever no live JWT is on the thread (task 09.4; this was a known
+ * gap since Phase 07 - see docs/spring-boot-4-notes.md and the commit this javadoc paragraph replaced
+ * for how every card authorization was permanently 401ing before it existed). The 401/403 handling
+ * below is kept regardless: a service account that is ever misconfigured or revoked must still fail
+ * loudly into the retry chain rather than a wrong, final, visible-to-the-holder decline.
  */
 @Component
 public class LedgerReservationsRestClient implements LedgerReservations {
@@ -44,8 +45,11 @@ public class LedgerReservationsRestClient implements LedgerReservations {
     private static final String EXPIRE_PATH = "/internal/ledger/reservations/{id}/expire";
 
     private final RestClient http;
+    private final ObjectProvider<ServiceAccountTokenProvider> serviceAccountTokens;
 
-    public LedgerReservationsRestClient(RestClient.Builder builder, LedgerClientProperties properties) {
+    public LedgerReservationsRestClient(RestClient.Builder builder, LedgerClientProperties properties,
+            ObjectProvider<ServiceAccountTokenProvider> serviceAccountTokens) {
+        this.serviceAccountTokens = serviceAccountTokens;
         this.http = builder
                 .baseUrl(properties.baseUrl())
                 .requestInterceptor((request, body, execution) -> {
@@ -203,11 +207,19 @@ public class LedgerReservationsRestClient implements LedgerReservations {
         }
     }
 
-    private static Optional<String> currentBearerToken() {
-        return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+    private Optional<String> currentBearerToken() {
+        Optional<String> liveUserToken = Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
                 .filter(JwtAuthenticationToken.class::isInstance)
                 .map(JwtAuthenticationToken.class::cast)
                 .map(authentication -> authentication.getToken().getTokenValue());
+        if (liveUserToken.isPresent()) {
+            return liveUserToken;
+        }
+        // No request thread, no live JWT - exactly the Kafka-consumer case this class's javadoc
+        // describes. ServiceAccountTokenProvider is only a bean when configured (see
+        // SecurityAutoConfiguration); ifAvailable leaves this Optional empty rather than failing
+        // if this service is ever run without revolut.security.service-account.client-id set.
+        return Optional.ofNullable(serviceAccountTokens.getIfAvailable()).map(ServiceAccountTokenProvider::token);
     }
 
     /** The problem detail the ledger sent, for the message - best effort, never why a call fails. */

@@ -344,6 +344,14 @@ services:
       # the second synchronous hop in the same decision. fx-service answers it out of its in-memory
       # rate cache. See CardFxRates.
       FX_BASE_URL: ${FX_BASE_URL:-http://fx-service:8085}
+      # Backs ServiceAccountTokenProvider's client-credentials grant (task 09.4) - the one call
+      # this service makes with no live user JWT on the thread (LedgerReservationsRestClient,
+      # decided from a Kafka consumer). Reuses the same confidential client identity-service's
+      # own admin calls already use; no new Keycloak client was provisioned for this.
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: revolut
+      KEYCLOAK_ADMIN_CLIENT_ID: revolut-backend
+      KEYCLOAK_ADMIN_CLIENT_SECRET: revolut-backend-local-dev-secret
     depends_on:
       postgres:
         condition: service_healthy

@@ -4,11 +4,14 @@ import com.revolutclone.security.api.ConfigurableRolesClaimConverter;
 import com.revolutclone.security.api.CurrentUserArgumentResolver;
 import com.revolutclone.security.api.IdentityProviderPort;
 import com.revolutclone.security.api.InMemoryIdentityAdapter;
+import com.revolutclone.security.api.ServiceAccountTokenProvider;
 import java.util.List;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import tools.jackson.databind.json.JsonMapper;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -78,6 +81,21 @@ public class SecurityAutoConfiguration implements WebMvcConfigurer {
     @ConditionalOnMissingBean
     public IdentityProviderPort inMemoryIdentityAdapter() {
         return new InMemoryIdentityAdapter();
+    }
+
+    /**
+     * Only registered when a service actually configures
+     * {@code revolut.security.service-account.client-id} - most services never need this (they
+     * only ever act on a live user's own JWT); see {@link ServiceAccountTokenProvider}'s javadoc
+     * for the one case that does.
+     */
+    @Bean
+    @ConditionalOnProperty("revolut.security.service-account.client-id")
+    @ConditionalOnMissingBean
+    public ServiceAccountTokenProvider serviceAccountTokenProvider(JsonMapper jsonMapper) {
+        RevolutSecurityProperties.ServiceAccount serviceAccount = properties.serviceAccount();
+        return new ServiceAccountTokenProvider(jsonMapper, serviceAccount.tokenUri(), serviceAccount.clientId(),
+                serviceAccount.clientSecret());
     }
 
     @Bean
