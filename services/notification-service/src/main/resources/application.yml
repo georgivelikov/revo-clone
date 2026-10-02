@@ -43,6 +43,13 @@ spring:
 revolut:
   security:
     roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  # Without this, a message escalated to <topic>.retry-5s by the shared DefaultErrorHandler
+  # never gets relayed back to the main topic - RetryTopicRelay only watches topics it is told
+  # about (RetryTopicProperties defaults to empty). See services/card-service/application.yml's
+  # fuller comment on this; task 09.4 found the gap empty project-wide.
+  messaging:
+    retry:
+      topics: [account.account.v1, ledger.entry.v1, notification.push.v1, payment.event.v1, fx.rate.tick.v1]
   notifications:
     websocket:
       # The handshake URL. A browser cannot set an Authorization header on a WebSocket

@@ -39,6 +39,16 @@ spring:
 revolut:
   security:
     roles-claim: ${ROLES_CLAIM:realm_access.roles}
+  # Without this, a message escalated to <topic>.retry-5s by the shared DefaultErrorHandler
+  # never gets relayed back to the main topic - RetryTopicRelay only watches topics it is told
+  # about (RetryTopicProperties defaults to empty). See services/card-service/application.yml's
+  # fuller comment on this; task 09.4 found the gap empty project-wide. Safe for these two
+  # seek-to-beginning projection listeners too: both are already required to be idempotent
+  # projections (see docs/spring-boot-4-notes.md's ConsumerSeekAware note) specifically so a
+  # replayed or retried message can never corrupt them.
+  messaging:
+    retry:
+      topics: [card.authorization.v1, ledger.entry.v1]
   analytics:
     # Task 06.6: vault creation opens the backing account on account-service, and vault
     # move-in/move-out initiates a transfer on payment-service - this service's only two
