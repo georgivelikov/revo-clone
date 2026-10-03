@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { RowSkeletonList, Skeleton } from '../components/Skeleton'
 import type { BudgetResponse, CategorySpend, TopMerchant, TrendPoint } from '../api/analytics'
 import { formatMoney } from '../api/format'
 import { CATEGORY_ORDER, colorForCategory } from '../charts/categoryColors'
@@ -278,9 +281,9 @@ function DrillDownPanel({ category, month, onClose }: { category: string; month:
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-subtle">Loading…</p>
+        <RowSkeletonList count={2} />
       ) : isError ? (
-        <p className="text-sm text-negative">Could not load these transactions.</p>
+        <ErrorState title="Could not load these transactions." />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-2">
           {data.map((txn) => (
@@ -526,9 +529,12 @@ export function AnalyticsScreen() {
       )}
 
       {summary.isLoading ? (
-        <p className="text-sm text-subtle">Loading…</p>
+        <div className="flex flex-col items-center gap-4 rounded-card bg-surface p-5">
+          <Skeleton className="h-48 w-48 rounded-full" />
+          <RowSkeletonList count={3} />
+        </div>
       ) : summary.isError ? (
-        <p className="text-sm text-negative">Could not load this month's spend.</p>
+        <ErrorState title="Could not load this month's spend." onRetry={() => void summary.refetch()} />
       ) : selectedCategory ? (
         <DrillDownPanel category={selectedCategory} month={monthKey} onClose={() => setSelectedCategory(null)} />
       ) : categoriesForCurrency.length > 0 && selectedCurrency ? (
@@ -537,12 +543,16 @@ export function AnalyticsScreen() {
           <CategoryLegend categories={categoriesForCurrency} currency={selectedCurrency} onSelect={setSelectedCategory} />
         </section>
       ) : (
-        <p className="text-sm text-subtle">No categorised spend this month yet.</p>
+        <EmptyState icon="◔" title="No categorised spend this month yet" description="Card taps settle into a category automatically once they clear." />
       )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted">Last {TREND_MONTHS} months</h2>
-        <TrendChart points={trend.data ?? []} anchor={monthDate} currency={selectedCurrency} />
+        {trend.isLoading ? (
+          <Skeleton className="h-28 w-full rounded-card" />
+        ) : (
+          <TrendChart points={trend.data ?? []} anchor={monthDate} currency={selectedCurrency} />
+        )}
       </section>
 
       <BudgetBars
@@ -553,7 +563,11 @@ export function AnalyticsScreen() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted">Top merchants</h2>
-        <TopMerchantsList merchants={merchants.data ?? []} currency={selectedCurrency} />
+        {merchants.isLoading ? (
+          <RowSkeletonList count={3} />
+        ) : (
+          <TopMerchantsList merchants={merchants.data ?? []} currency={selectedCurrency} />
+        )}
       </section>
     </div>
   )

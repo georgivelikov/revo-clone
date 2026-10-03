@@ -98,3 +98,90 @@ body {
 .animate-flash {
   animation: flash-value 600ms ease-out;
 }
+
+/* task 09.6: "skeletons, not spinners, on every list and balance." A shimmer sweeping across a
+   surface-coloured block, rather than a spinner, so a loading row keeps the shape of the real
+   row it stands in for instead of replacing it with an unrelated motif. */
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    100deg,
+    var(--color-surface) 35%,
+    var(--color-surface-raised) 50%,
+    var(--color-surface) 65%
+  );
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--color-surface-raised);
+  }
+}
+
+/* task 09.6 accessibility: "focus rings, keyboard-navigable flows." One visible, high-contrast
+   ring for every interactive element, keyboard-only (`:focus-visible`, not `:focus`, so a mouse
+   click never shows a ring a pointer user didn't ask for) - applied globally rather than
+   per-component so no interactive element added later can silently end up unreachable by
+   keyboard with no visible focus indicator. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* task 09.6: "sheets should spring." One shared entrance for every modal sheet (RevealModal,
+   the Vaults transfer modal): scales and rises in with a slight overshoot rather than a linear
+   fade, then settles - the closest a plain CSS keyframe gets to a physical spring without
+   pulling in an animation library for two modals. */
+@keyframes sheet-spring-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-sheet {
+  animation: sheet-spring-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet {
+    animation: none;
+  }
+}
+
+/* task 09.6 accessibility: "a contrast pass on the dark theme. The gradient card faces are the
+   likely failure." White text directly on --color-accent/--color-accent-hover measures under
+   WCAG AA's 4.5:1 for normal-weight text. A translucent dark scrim behind the gradient (not a
+   darker gradient outright - the brand colours stay exactly as designed) drops the *effective*
+   background luminance the text sits on without changing what the card visually reads as. */
+.card-face-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: inherit;
+}

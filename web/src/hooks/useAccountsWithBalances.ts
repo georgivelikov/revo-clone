@@ -45,5 +45,6 @@ export function useAccountsWithBalances() {
     isLoading: accountsQuery.isLoading,
     isError: accountsQuery.isError,
     error: accountsQuery.error,
+    refetch: accountsQuery.refetch,
   }
 }

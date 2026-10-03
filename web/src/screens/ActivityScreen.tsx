@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { RowSkeletonList } from '../components/Skeleton'
 import { formatMoney } from '../api/format'
 import { isOptimisticPaymentId } from '../hooks/useCreatePayment'
 import { usePaymentsFeed } from '../hooks/usePaymentsFeed'
@@ -17,18 +20,16 @@ function statusColor(status: string): string {
 }
 
 export function ActivityScreen() {
-  const { data: payments, isLoading, isError } = usePaymentsFeed()
+  const { data: payments, isLoading, isError, refetch } = usePaymentsFeed()
 
   return (
     <div className="flex flex-col gap-4 px-5 pb-6 pt-8">
       <h1 className="text-xl font-semibold text-foreground">Activity</h1>
 
       {isLoading ? (
-        <p className="text-sm text-subtle">Loading…</p>
+        <RowSkeletonList count={4} />
       ) : isError && (payments?.length ?? 0) === 0 ? (
-        <p className="text-sm text-subtle">
-          Nothing to show yet - transfers you send this session will appear here.
-        </p>
+        <ErrorState title="Could not load your activity." onRetry={() => void refetch()} />
       ) : payments && payments.length > 0 ? (
         <div className="flex flex-col gap-2">
           {payments.map((payment) => (
@@ -50,7 +51,11 @@ export function ActivityScreen() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-subtle">No activity yet.</p>
+        <EmptyState
+          icon="≣"
+          title="No activity yet"
+          description="Transfers you send or receive will appear here."
+        />
       )}
     </div>
   )

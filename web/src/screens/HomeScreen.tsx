@@ -1,5 +1,9 @@
 import { useAuth } from 'react-oidc-context'
 import { Link } from 'react-router-dom'
+import { BalanceSkeleton, RowSkeletonList } from '../components/Skeleton'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { CountUpMoney } from '../components/CountUpMoney'
 import { formatMoney } from '../api/format'
 import { useAccountsWithBalances } from '../hooks/useAccountsWithBalances'
 import { usePaymentsFeed } from '../hooks/usePaymentsFeed'
@@ -7,7 +11,13 @@ import { isOptimisticPaymentId } from '../hooks/useCreatePayment'
 
 export function HomeScreen() {
   const auth = useAuth()
-  const { accounts, isLoading, isError } = useAccountsWithBalances()
+  const { accounts: allAccounts, isLoading, isError, refetch } = useAccountsWithBalances()
+  // GET /api/accounts/me returns every account this user owns, vaults included (a vault is its
+  // own backed `account` row - see account-service's domain). "Total balance" and the currency
+  // chips below mean spendable wallets, not a vault's own balance - found live testing task
+  // 09.6's polish pass: without this filter, a round-up vault showed up as a second, always-€0
+  // chip for whichever currency it happened to be denominated in.
+  const accounts = allAccounts.filter((account) => account.type === 'WALLET')
   const paymentsFeed = usePaymentsFeed()
   const recentPayments = (paymentsFeed.data ?? []).slice(0, 3)
 
@@ -34,15 +44,25 @@ export function HomeScreen() {
       <section className="rounded-card bg-surface p-6">
         <p className="text-sm text-muted">Total balance</p>
         {isLoading ? (
-          <p className="mt-1 text-3xl font-semibold text-foreground">– . –</p>
+          <div className="mt-2">
+            <BalanceSkeleton />
+          </div>
         ) : isError ? (
-          <p className="mt-1 text-lg font-medium text-negative">Could not load your accounts.</p>
+          <div className="mt-2">
+            <ErrorState title="Could not load your accounts." onRetry={() => void refetch()} />
+          </div>
         ) : primary ? (
-          <p className="mt-1 text-3xl font-semibold text-foreground">
-            {primary.availableMinor === null
-              ? '– . –'
-              : formatMoney(primary.availableMinor, primary.currency)}
-          </p>
+          primary.availableMinor === null ? (
+            <p className="mt-1 text-3xl font-semibold text-foreground">
+              {primary.balanceError ? 'Balance unavailable' : '…'}
+            </p>
+          ) : (
+            <CountUpMoney
+              amountMinor={primary.availableMinor}
+              currency={primary.currency}
+              className="mt-1 block text-3xl font-semibold text-foreground"
+            />
+          )
         ) : (
           <p className="mt-1 text-lg font-medium text-muted">No accounts yet.</p>
         )}
@@ -69,9 +89,17 @@ export function HomeScreen() {
 
       <section>
         <h2 className="text-sm font-medium text-muted">Recent activity</h2>
-        {recentPayments.length === 0 ? (
-          <div className="mt-3 rounded-card bg-surface p-6 text-sm text-subtle">
-            No transfers yet.
+        {paymentsFeed.isLoading ? (
+          <div className="mt-3">
+            <RowSkeletonList count={2} />
+          </div>
+        ) : recentPayments.length === 0 ? (
+          <div className="mt-3">
+            <EmptyState
+              icon="≣"
+              title="No transfers yet"
+              description="Send money from the Transfer tab and it will show up here."
+            />
           </div>
         ) : (
           <div className="mt-3 flex flex-col gap-2">

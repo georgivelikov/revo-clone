@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { EmptyState } from '../components/EmptyState'
 import { formatMoney, parseMoneyToMinor } from '../api/format'
 import { ApiError } from '../api/http'
 import type { QuoteResponse } from '../api/fx'
@@ -42,7 +43,11 @@ function CountdownRing({ fractionRemaining }: { fractionRemaining: number }) {
 
 export function ExchangeScreen() {
   const { accounts } = useAccountsWithBalances()
-  const activeAccounts = accounts.filter((account) => account.state === 'ACTIVE')
+  // Vaults come back from the same accounts call (see HomeScreen's note) but can't be exchanged
+  // into or out of directly - only wallets belong here.
+  const activeAccounts = accounts.filter(
+    (account) => account.state === 'ACTIVE' && account.type === 'WALLET',
+  )
   const currencies = [...new Set(activeAccounts.map((account) => account.currency))]
 
   const [step, setStep] = useState<Step>('setup')
@@ -50,6 +55,28 @@ export function ExchangeScreen() {
   const [buyCurrency, setBuyCurrency] = useState(
     currencies.find((currency) => currency !== currencies[0]) ?? currencies[0] ?? '',
   )
+
+  // Accounts load after this component's first render (both useState initializers above see an
+  // empty list), so the defaults are adjusted here once they arrive - same "adjust state during
+  // render" pattern as CardScreen's IssueCardForm, and for the same reason: without it,
+  // sellCurrency/buyCurrency stay stuck at '', sellAccount below is permanently undefined, and
+  // the whole 'setup' step silently renders nothing.
+  //
+  // resolvedSellCurrency is computed rather than read back off the `sellCurrency` state variable
+  // because the setSellCurrency call below does not update that binding within this same
+  // function call - using the stale '' to pick buyCurrency's fallback below would let `find`
+  // match currencies[0] for *both* (anything "!== ''" passes), colliding sell and buy on EUR.
+  const resolvedSellCurrency = currencies.includes(sellCurrency) ? sellCurrency : (currencies[0] ?? '')
+  if (currencies.length > 0 && sellCurrency !== resolvedSellCurrency) {
+    setSellCurrency(resolvedSellCurrency)
+  }
+  const resolvedBuyCurrency = currencies.includes(buyCurrency)
+    ? buyCurrency
+    : (currencies.find((currency) => currency !== resolvedSellCurrency) ?? resolvedSellCurrency)
+  if (currencies.length > 0 && buyCurrency !== resolvedBuyCurrency) {
+    setBuyCurrency(resolvedBuyCurrency)
+  }
+
   const [amountInput, setAmountInput] = useState('')
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
   const [nowMs, setNowMs] = useState(() => Date.now())
@@ -147,9 +174,11 @@ export function ExchangeScreen() {
     return (
       <div className="flex flex-col gap-3 px-5 pb-6 pt-8">
         <h1 className="text-xl font-semibold text-foreground">Exchange</h1>
-        <p className="text-sm text-muted">
-          You need wallets in at least two currencies to exchange money.
-        </p>
+        <EmptyState
+          icon="⇌"
+          title="Nothing to exchange yet"
+          description="You need wallets in at least two currencies to exchange money."
+        />
       </div>
     )
   }

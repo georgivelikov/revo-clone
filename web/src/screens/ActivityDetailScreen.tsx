@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import { useParams } from 'react-router-dom'
+import { ErrorState } from '../components/ErrorState'
+import { Skeleton } from '../components/Skeleton'
 import { formatMoney } from '../api/format'
 import { fetchPayment } from '../api/payments'
 
@@ -9,7 +11,7 @@ export function ActivityDetailScreen() {
   const auth = useAuth()
   const accessToken = auth.user?.access_token
 
-  const { data: payment, isLoading, isError } = useQuery({
+  const { data: payment, isLoading, isError, refetch } = useQuery({
     queryKey: ['payments', 'detail', paymentId],
     queryFn: () => fetchPayment(accessToken!, paymentId!),
     enabled: Boolean(accessToken) && Boolean(paymentId),
@@ -20,9 +22,22 @@ export function ActivityDetailScreen() {
     <div className="flex flex-col gap-4 px-5 pt-8">
       <h1 className="text-xl font-semibold text-foreground">Payment</h1>
 
-      {isLoading && <p className="text-sm text-subtle">Loading…</p>}
+      {isLoading && (
+        <div className="flex flex-col gap-3 rounded-card bg-surface p-5">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="flex justify-between">
+              <Skeleton className="h-3.5 w-16 rounded" />
+              <Skeleton className="h-3.5 w-24 rounded" />
+            </div>
+          ))}
+        </div>
+      )}
       {isError && (
-        <p className="text-sm text-subtle">Could not load this payment yet.</p>
+        <ErrorState
+          title="Could not load this payment."
+          detail="It may still be in flight - this can take a few seconds right after sending."
+          onRetry={() => void refetch()}
+        />
       )}
       {payment && (
         <section className="flex flex-col gap-3 rounded-card bg-surface p-5 text-sm">

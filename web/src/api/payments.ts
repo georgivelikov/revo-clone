@@ -48,9 +48,10 @@ export function createPayment(
   })
 }
 
-// GET /api/payments and GET /api/payments/{id} are documented in payment-service's endpoint
-// table but are not implemented server-side as of task 03.9 - only POST exists so far. Calling
-// them will 404 until a later task adds them; callers treat that as "no feed yet", not a crash.
+// Feed of every payment touching one of the caller's own accounts, newest first - see
+// PaymentQueryService (task 09.6; the endpoint was documented since task 03.1 but, until this
+// task's Activity screen and the poll fallback from task 03.10 both needed it, nothing had ever
+// actually called it, so the gap in payment-service went unnoticed).
 export function fetchPayments(accessToken: string): Promise<PaymentResponse[]> {
   return apiFetch<PaymentResponse[]>('/api/payments', accessToken)
 }

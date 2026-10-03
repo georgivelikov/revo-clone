@@ -31,7 +31,11 @@ export function TransferScreen() {
   const auth = useAuth()
   const userId = auth.user?.profile.sub
   const { accounts } = useAccountsWithBalances()
-  const activeAccounts = accounts.filter((account) => account.state === 'ACTIVE')
+  // Vaults come back from the same accounts call (see HomeScreen's note) but can't send or
+  // receive a transfer directly - only wallets belong in this picker.
+  const activeAccounts = accounts.filter(
+    (account) => account.state === 'ACTIVE' && account.type === 'WALLET',
+  )
   const mutation = useCreatePayment()
 
   const [step, setStep] = useState<Step>('recipient')

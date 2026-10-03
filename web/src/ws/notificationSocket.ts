@@ -21,6 +21,12 @@ const RATE_TICKS_TOPIC = '/topic/rates'
 const INITIAL_RECONNECT_DELAY_MS = 1_000
 const MAX_RECONNECT_DELAY_MS = 30_000
 
+/** task 09.6: "detect a dropped socket and show a subtle reconnecting indicator." `'connecting'`
+ * covers both the first-ever handshake and every automatic retry after a drop - stompjs's own
+ * `reconnectDelay`/`maxReconnectDelay` above already drive the retry loop; this just reports
+ * which phase of it the UI is currently in. */
+export type ConnectionStatus = 'connecting' | 'connected'
+
 function wsUrl(path: string, ticket: string): string {
   // env.notificationBaseUrl is http(s):// because it also serves the plain HTTP ticket
   // endpoint; the socket itself needs the ws(s) scheme.
@@ -51,6 +57,7 @@ export class NotificationSocket {
     getAccessToken: () => string | undefined,
     onEvent: (event: ClientEvent) => void,
     onRateTick?: (tick: RateTickFrame) => void,
+    onStatusChange?: (status: ConnectionStatus) => void,
   ) {
     this.client = new Client({
       reconnectDelay: INITIAL_RECONNECT_DELAY_MS,
@@ -70,6 +77,7 @@ export class NotificationSocket {
         }
       },
       onConnect: () => {
+        onStatusChange?.('connected')
         this.client.subscribe(USER_QUEUE, (message: IMessage) => {
           onEvent(JSON.parse(message.body) as ClientEvent)
         })
@@ -79,6 +87,11 @@ export class NotificationSocket {
           })
         }
       },
+      // Fires on the very first handshake attempt too, so the indicator's default ('connecting')
+      // state and this are consistent - but set explicitly anyway rather than relying on that
+      // default, since a reconnect after a real drop is exactly the case worth being correct
+      // about on purpose, not by coincidence.
+      onWebSocketClose: () => onStatusChange?.('connecting'),
     })
   }
 

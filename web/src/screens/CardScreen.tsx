@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { RowSkeletonList, Skeleton } from '../components/Skeleton'
 import { formatMoney, parseMoneyToMinor } from '../api/format'
 import { ApiError } from '../api/http'
 import type { CardAuthorizationResponse, CardLimitResponse, CardResponse } from '../api/cards'
@@ -19,19 +22,22 @@ function CardFace({ card }: { card: CardResponse }) {
   const frozen = card.state === 'FROZEN'
   return (
     <div
-      className={`relative flex aspect-[1.586] flex-col justify-between rounded-card bg-gradient-to-br from-accent to-accent-hover p-5 text-white shadow-lg transition-all duration-300 ${
+      className={`relative flex aspect-[1.586] flex-col justify-between overflow-hidden rounded-card bg-gradient-to-br from-accent to-accent-hover p-5 text-white shadow-lg transition-all duration-300 ${
         frozen ? 'grayscale' : ''
       }`}
     >
+      {/* task 09.6 accessibility: scrim behind the text so white-on-accent clears WCAG AA
+          contrast - see index.css's .card-face-scrim comment. */}
+      <span className="card-face-scrim" />
       {frozen && (
-        <span className="absolute right-4 top-4 rounded-control bg-black/40 px-2 py-1 text-xs font-semibold">
+        <span className="absolute right-4 top-4 z-10 rounded-control bg-black/40 px-2 py-1 text-xs font-semibold">
           Frozen
         </span>
       )}
-      <span className="text-sm font-medium opacity-80">{card.label || card.type}</span>
-      <div>
+      <span className="relative z-10 text-sm font-medium opacity-90">{card.label || card.type}</span>
+      <div className="relative z-10">
         <p className="text-lg tracking-[0.3em]">•••• {card.panLast4}</p>
-        <p className="mt-1 text-xs opacity-80">
+        <p className="mt-1 text-xs opacity-90">
           {String(card.expiryMonth).padStart(2, '0')}/{String(card.expiryYear).slice(-2)}
         </p>
       </div>
@@ -62,7 +68,7 @@ function RevealModal({ card, onClose }: { card: CardResponse; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
       <button type="button" aria-label="Close" className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div className="relative flex w-full max-w-xs flex-col gap-4 rounded-card bg-surface p-6">
+      <div className="animate-sheet relative flex w-full max-w-xs flex-col gap-4 rounded-card bg-surface p-6">
         {!revealed ? (
           <>
             <h2 className="text-sm font-semibold text-foreground">Confirm it's you</h2>
@@ -252,7 +258,7 @@ function SpendFeed({ cardId }: { cardId: string }) {
     <section className="flex flex-col gap-2">
       <h2 className="text-sm font-medium text-muted">Spend feed</h2>
       {isLoading ? (
-        <p className="text-sm text-subtle">Loading…</p>
+        <RowSkeletonList count={3} />
       ) : authorizations && authorizations.length > 0 ? (
         <div className="flex flex-col gap-2">
           {authorizations.map((authorization) => (
@@ -260,7 +266,7 @@ function SpendFeed({ cardId }: { cardId: string }) {
           ))}
         </div>
       ) : (
-        <p className="rounded-card bg-surface p-6 text-sm text-subtle">No spend on this card yet.</p>
+        <EmptyState icon="▭" title="No spend on this card yet" description="Tap to pay somewhere and it will show up here." />
       )}
     </section>
   )
@@ -308,7 +314,11 @@ function CardDetail({ card }: { card: CardResponse }) {
 
 function IssueCardForm() {
   const { accounts } = useAccountsWithBalances()
-  const activeAccounts = accounts.filter((account) => account.state === 'ACTIVE')
+  // Vaults come back from the same accounts call (see HomeScreen's note) but can't fund a card -
+  // only wallets belong in this picker.
+  const activeAccounts = accounts.filter(
+    (account) => account.state === 'ACTIVE' && account.type === 'WALLET',
+  )
   const [accountId, setAccountId] = useState(activeAccounts[0]?.id ?? '')
   const [pin, setPin] = useState('')
   const issueCard = useIssueCard()
@@ -365,8 +375,12 @@ function IssueCardForm() {
   )
 }
 
+function CardFaceSkeleton() {
+  return <Skeleton className="aspect-[1.586] rounded-card" />
+}
+
 export function CardScreen() {
-  const { data: cards, isLoading, isError } = useCards()
+  const { data: cards, isLoading, isError, refetch } = useCards()
   const card = cards?.[0]
 
   return (
@@ -374,9 +388,9 @@ export function CardScreen() {
       <h1 className="text-xl font-semibold text-foreground">Card</h1>
 
       {isLoading ? (
-        <p className="text-sm text-subtle">Loading…</p>
+        <CardFaceSkeleton />
       ) : isError ? (
-        <p className="text-sm text-negative">Could not load your cards.</p>
+        <ErrorState title="Could not load your cards." onRetry={() => void refetch()} />
       ) : card ? (
         <CardDetail card={card} />
       ) : (

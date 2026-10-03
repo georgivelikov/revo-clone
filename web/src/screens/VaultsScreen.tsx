@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { RowSkeletonList } from '../components/Skeleton'
 import { formatMoney, parseMoneyToMinor } from '../api/format'
 import { ApiError } from '../api/http'
 import type { VaultResponse, VaultTransferDirection } from '../api/vaults'
@@ -107,7 +110,7 @@ function TransferModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
       <button type="button" aria-label="Close" className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative flex w-full max-w-xs flex-col gap-4 rounded-card bg-surface p-6">
+      <div className="animate-sheet relative flex w-full max-w-xs flex-col gap-4 rounded-card bg-surface p-6">
         <h2 className="text-sm font-semibold text-foreground">{vault.name}</h2>
 
         <div className="flex gap-2">
@@ -484,7 +487,7 @@ function VaultDetail({ vault, onClose }: { vault: VaultResponse; onClose: () => 
 }
 
 export function VaultsScreen() {
-  const { data: vaults, isLoading, isError } = useVaults()
+  const { data: vaults, isLoading, isError, refetch } = useVaults()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -502,9 +505,9 @@ export function VaultsScreen() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-subtle">Loading…</p>
+        <RowSkeletonList count={2} />
       ) : isError ? (
-        <p className="text-sm text-negative">Could not load your vaults.</p>
+        <ErrorState title="Could not load your vaults." onRetry={() => void refetch()} />
       ) : selected ? (
         <VaultDetail vault={selected} onClose={() => setSelectedId(null)} />
       ) : creating ? (
@@ -517,9 +520,11 @@ export function VaultsScreen() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted">
-            You don't have a vault yet. Create one to set money aside toward a goal.
-          </p>
+          <EmptyState
+            icon="▣"
+            title="No vaults yet"
+            description="Create one to set money aside toward a goal, with optional round-ups from a card."
+          />
           <CreateVaultForm onDone={() => setCreating(false)} />
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
@@ -8,6 +8,7 @@ import { RATE_TICKS_QUERY_KEY } from '../hooks/useRateTicks'
 import { PAYMENTS_FEED_QUERY_KEY } from '../hooks/usePaymentsFeed'
 import { PAYMENT_COMPLETED, TRANSFER_FAILED } from './clientEvent'
 import type { ClientEvent } from './clientEvent'
+import type { ConnectionStatus } from './notificationSocket'
 import { NotificationSocket } from './notificationSocket'
 import type { RateTickFrame } from './rateTick'
 
@@ -60,10 +61,19 @@ function applyRateTick(queryClient: QueryClient, tick: RateTickFrame): void {
   }))
 }
 
-/** Mounted once at the app root - opens the socket for the lifetime of an authenticated session. */
-export function useNotificationSocket(): void {
+/** Mounted once at the app root - opens the socket for the lifetime of an authenticated session.
+ * Returns the current connection status so AppShell can show a subtle reconnecting indicator
+ * (task 09.6) without a second socket connection of its own - `null` while unauthenticated, when
+ * no socket exists to report on at all. */
+export function useNotificationSocket(): ConnectionStatus | null {
   const auth = useAuth()
   const queryClient = useQueryClient()
+  // Initialized to 'connecting' directly, rather than set from inside the effect below:
+  // mounting this hook and starting the first connection attempt happen together, so the
+  // initial state already matches the only thing the effect would otherwise set it to on its
+  // first run. A later real drop still updates this - from the socket's own onWebSocketClose
+  // callback, an event, not a synchronous effect-body setState.
+  const [status, setStatus] = useState<ConnectionStatus | null>('connecting')
   // A ref, not a dependency: react-oidc-context silently rotates the access token well before
   // it expires, and reconnecting the socket on every rotation would fight its own backoff for
   // no reason. beforeConnect reads this at the moment it mints each ticket, so a reconnect -
@@ -76,6 +86,8 @@ export function useNotificationSocket(): void {
 
   useEffect(() => {
     if (!auth.isAuthenticated) {
+      // No setState here - the returned value below is derived straight from
+      // auth.isAuthenticated for this case, not from state.
       return
     }
     const socket = new NotificationSocket(
@@ -89,8 +101,11 @@ export function useNotificationSocket(): void {
         applyClientEvent(queryClient, event)
       },
       (tick) => applyRateTick(queryClient, tick),
+      setStatus,
     )
     socket.connect()
     return () => socket.disconnect()
   }, [auth.isAuthenticated, queryClient])
+
+  return auth.isAuthenticated ? status : null
 }
