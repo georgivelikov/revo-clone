@@ -3,12 +3,16 @@ package com.revolutclone.payment.web;
 import com.revolutclone.payment.domain.Payment;
 import com.revolutclone.payment.service.InitiatePaymentCommand;
 import com.revolutclone.payment.service.PaymentInitiator;
+import com.revolutclone.payment.service.PaymentQueryService;
 import com.revolutclone.payment.web.error.MissingIdempotencyKeyException;
 import com.revolutclone.security.api.CurrentUser;
 import com.revolutclone.security.api.UserPrincipal;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -22,9 +26,11 @@ public class PaymentController {
     public static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
     private final PaymentInitiator initiator;
+    private final PaymentQueryService queries;
 
-    public PaymentController(PaymentInitiator initiator) {
+    public PaymentController(PaymentInitiator initiator, PaymentQueryService queries) {
         this.initiator = initiator;
+        this.queries = queries;
     }
 
     /**
@@ -60,5 +66,25 @@ public class PaymentController {
                 request.reference()));
 
         return ResponseEntity.accepted().body(PaymentResponse.from(payment));
+    }
+
+    /**
+     * The activity feed (task 09.6): every payment that moved money into or out of one of the
+     * caller's own accounts, newest first. See {@link PaymentQueryService#feedFor}.
+     */
+    @GetMapping
+    public List<PaymentResponse> feed(@CurrentUser UserPrincipal principal) {
+        return queries.feedFor(UUID.fromString(principal.userId())).stream()
+                .map(PaymentResponse::from)
+                .toList();
+    }
+
+    /**
+     * The poll fallback from plans/phase-03-payments-and-ui.md's realtime section (task 03.10):
+     * "if no event arrives within ~5s, fall back to polling GET /api/payments/{id}".
+     */
+    @GetMapping("/{paymentId}")
+    public PaymentResponse get(@CurrentUser UserPrincipal principal, @PathVariable UUID paymentId) {
+        return PaymentResponse.from(queries.getVisibleTo(UUID.fromString(principal.userId()), paymentId));
     }
 }

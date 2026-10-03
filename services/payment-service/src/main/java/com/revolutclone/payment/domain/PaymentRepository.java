@@ -1,5 +1,7 @@
 package com.revolutclone.payment.domain;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,4 +24,15 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
      * {@code CrossCurrencyEntryPostedHandler}/{@code CrossCurrencyEntryRejectedHandler}.
      */
     Optional<Payment> findByQuoteId(UUID quoteId);
+
+    /**
+     * {@code GET /api/payments}'s feed (task 09.6): every payment that moved money into or out of
+     * one of the caller's own accounts, newest first. Two account-id sets rather than one userId
+     * column, because a payment only ever records the accounts it moved money between - the
+     * caller is "mine" by owning one of those accounts, in either direction, which is what
+     * {@link PaymentQueryService} resolves via {@code AccountViewRepository.findByUserId} before
+     * calling this.
+     */
+    List<Payment> findBySourceAccountIdInOrTargetAccountIdInOrderByCreatedAtDesc(
+            Collection<UUID> sourceAccountIds, Collection<UUID> targetAccountIds);
 }
