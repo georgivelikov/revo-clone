@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.9",
+  "current": "09.10",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -2059,12 +2059,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.9-write-the-ten-adrs",
-      "commit": null,
+      "commit": "d094013",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. The task list says 'ten' but the phase file's own Design detail table lists eleven (0001-0011) - wrote all eleven, following the table. Each follows the standard context/decision/consequences shape with an honest bad-consequences section, grounded in real findings rather than post-hoc justification: 0003/0004/0005 cite phase 08's actual load-test numbers (outbox poller throughput ceiling, hotspot retry rates at 1 vs 3 instances); 0007/0001 cite this session's own findings (the KC_HOSTNAME bug that silently blocked every browser login project-wide, the honest calendar-time cost of ten services); 0008 states the instructed honest answer directly ('JSON was simpler and the tradeoff is no enforced schema evolution'); 0011 is explicit that the messaging/database portability claims in docs/architecture.md are designed-for but not yet proven - the Redpanda/non-superuser-Postgres/dual-identity-adapter swap tests from that doc's §7 have not been run, recorded as outstanding verification work rather than asserted as done. Gate green: tripwire clean, mvn clean verify green, 675 tests (no drop, docs-only)."
     },
     {
       "id": "09.10",
