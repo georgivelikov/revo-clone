@@ -1,0 +1,100 @@
+name: CI
+
+# plans/phase-09-polish.md's CI section. build/frontend run on every push and PR; the e2e job
+# (full docker-compose stack + the real seed script + the ledger zero-sum invariant) is too slow
+# to run on every push, so it's nightly plus on-demand - see the e2e job's own `if:` below.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *" # nightly, 03:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: build (mvn verify)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # Unit tests + Testcontainers-backed integration tests (common-messaging, common-security,
+      # every service's own *Test classes against real Postgres). Testcontainers works on
+      # GitHub-hosted runners without special setup - Docker is already present.
+      - name: mvn -B verify
+        run: mvn -B clean verify
+
+  frontend:
+    name: frontend (build + lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+
+  e2e:
+    name: e2e (full stack, seed, zero-sum invariant)
+    runs-on: ubuntu-latest
+    # Nightly/manual only - plans/phase-09-polish.md: "the E2E job is the one that may be too
+    # slow to run on every push; schedule it nightly instead." A plain `push`/`pull_request`
+    # event has no `github.event.schedule` field, so this condition is false for those and the
+    # job is skipped; it runs on the cron trigger above and on a manual workflow_dispatch.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: [build, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # ubuntu-latest ships PowerShell (pwsh) preinstalled, which is what tasks.ps1 needs -
+      # task 09.12's tasks.sh is the Bash equivalent for a non-pwsh environment, not required here.
+      - name: Build images and bring up the full stack
+        run: |
+          export GIT_SHA=$(git rev-parse --short HEAD)
+          docker compose -f docker-compose.infra.yml -f docker-compose.yml --profile services up -d --build
+
+      # Seeding goes through the real public APIs (never a direct SQL insert), so this is itself
+      # an end-to-end exercise of login, account funding, transfers, card spend and FX exchanges -
+      # see tools/seed/seed.ps1's own header for why that property matters.
+      - name: Seed demo data through the public APIs
+        run: pwsh ./tasks.ps1 seed
+
+      # plans/phase-09-polish.md: "add a CI step asserting the zero-sum invariant after the E2E
+      # run - a build that goes red when money leaks is a satisfying thing to own." The query is
+      # the one proven correct in docs/failure-modes.md §0, not the stale one in CLAUDE.md's own
+      # text - this is the query seed.ps1's own Assert-ZeroSumInvariant runs.
+      - name: Assert the ledger zero-sum invariant
+        run: |
+          UNBALANCED=$(docker compose -f docker-compose.infra.yml -f docker-compose.yml --profile services \
+            exec -T postgres psql -U ledger -d ledger -tAc \
+            "SELECT entry_id FROM posting GROUP BY entry_id HAVING SUM(CASE WHEN direction='DEBIT' THEN amount_minor ELSE -amount_minor END) <> 0;")
+          if [ -n "$(echo "$UNBALANCED" | tr -d '[:space:]')" ]; then
+            echo "UNBALANCED entry_id(s) found - money leaked:"
+            echo "$UNBALANCED"
+            exit 1
+          fi
+          echo "every journal entry sums to zero."
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.infra.yml -f docker-compose.yml --profile services down -v

@@ -1,5 +1,11 @@
 # Revolut Clone
 
+[![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<owner>/<repo>/actions/workflows/ci.yml)
+
+<!-- Replace <owner>/<repo> above with this repo's actual GitHub path once it has one - this
+     project has no git remote configured as of this commit, so the real path isn't knowable
+     from inside the repo. -->
+
 A Revolut-style neobank built to practise distributed-systems engineering: a double-entry
 ledger, event-driven choreography over Kafka, sagas with compensation, idempotency under
 retries, and a UX that makes eventual consistency visible.
