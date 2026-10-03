@@ -35,7 +35,11 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       IDENTITY_SERVICE_URI: http://identity-service:8081
       ACCOUNT_SERVICE_URI: http://account-service:8082
       PAYMENT_SERVICE_URI: http://payment-service:8084
@@ -89,7 +93,11 @@ services:
       IDENTITY_DB_USER: identity
       IDENTITY_DB_PASSWORD: identity
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       KEYCLOAK_SERVER_URL: http://keycloak:8080
       KEYCLOAK_REALM: revolut
       KEYCLOAK_ADMIN_CLIENT_ID: revolut-backend
@@ -123,7 +131,11 @@ services:
       ACCOUNT_DB_USER: account
       ACCOUNT_DB_PASSWORD: account
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,7 +165,11 @@ services:
       PAYMENT_DB_USER: payment
       PAYMENT_DB_PASSWORD: payment
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       # Cross-currency transfers obtain a quote from fx-service over HTTP (plans/phase-04's
       # Variant, task 8) - without this, FxClientProperties.baseUrl() binds the literal
       # unresolved "${FX_BASE_URL}" text, which RestClient's URI builder later tries to expand
@@ -192,7 +208,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       # The WebSocket upgrade's CORS check is separate from HTTP CORS (the gateway's
       # CORS_ALLOWED_ORIGIN, above, covers HTTP only) - the browser connects here directly for
       # /ws rather than through the gateway, so the allowed origin has to be repeated here.
@@ -266,7 +286,11 @@ services:
       LEDGER_DB_USER: ledger
       LEDGER_DB_PASSWORD: ledger
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
     depends_on:
       postgres:
         condition: service_healthy
@@ -296,7 +320,11 @@ services:
       FX_DB_USER: fx
       FX_DB_PASSWORD: fx
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       # Quoting reserves the sell amount on the caller's wallet, which is a synchronous call to the
       # ledger - the one hop fx-service cannot make through the outbox. See LedgerReservations.
       LEDGER_BASE_URL: ${LEDGER_BASE_URL:-http://ledger-service:8083}
@@ -331,7 +359,11 @@ services:
       CARD_DB_USER: card
       CARD_DB_PASSWORD: card
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       # Fixed, publicly-known 32-byte test keys, base64-encoded - local/demo stack only. See
       # application-local.yml and plans/phase-05-cards.md's PAN handling note.
       CARD_ENCRYPTION_KEY: AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=
@@ -386,7 +418,11 @@ services:
       ANALYTICS_DB_USER: analytics
       ANALYTICS_DB_PASSWORD: analytics
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      OIDC_ISSUER_URI: http://keycloak:8080/realms/revolut
+      OIDC_ISSUER_URI: http://127.0.0.1:8180/realms/revolut
+      # Resolves `iss` validation (above) from the actual signing-key fetch - a browser-reachable
+      # `iss` string is not container-reachable, so the JWKS HTTP call needs its own, different,
+      # Docker-network address. See docker-compose.infra.yml's KC_HOSTNAME comment (task 09.6).
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/revolut/protocol/openid-connect/certs
       ACCOUNT_BASE_URL: ${ACCOUNT_BASE_URL:-http://account-service:8082}
       PAYMENT_BASE_URL: ${PAYMENT_BASE_URL:-http://payment-service:8084}
     depends_on:

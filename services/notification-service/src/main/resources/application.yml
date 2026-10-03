@@ -39,6 +39,15 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${OIDC_ISSUER_URI}
+          # Decoupled from issuer-uri above on purpose (task 09.6): the `iss` string a browser
+          # login produces is reachable from a browser, not from this container. See
+          # docker-compose.infra.yml's KC_HOSTNAME comment for the full story.
+          # Empty fallback, not a bare ${OIDC_JWK_SET_URI}: JwkSetUriCondition itself resolves this
+          # property while deciding whether to match, so an unset var throws PlaceholderResolutionException
+          # at context-refresh time rather than reading as "absent" - same trap as the service-account
+          # properties below. Empty resolves cleanly to "not configured", and Boot falls back to the
+          # issuer-uri-based decoder, which is what every test here sets instead.
+          jwk-set-uri: ${OIDC_JWK_SET_URI:}
 
 revolut:
   security:

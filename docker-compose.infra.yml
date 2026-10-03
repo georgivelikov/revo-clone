@@ -114,16 +114,39 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      # Without a fixed hostname, Keycloak's dev-mode default derives `iss` from whatever
-      # Host header the caller used - so a token minted by hitting the host-exposed
-      # localhost:8180 carries iss=http://localhost:8180/realms/revolut, while every service's
-      # own OIDC_ISSUER_URI is the container-network http://keycloak:8080/realms/revolut. Spring's
-      # resource-server validates `iss` against that exact configured string, so the token is
-      # rejected outright - not a signature problem, an issuer-string mismatch. Pinning the
-      # hostname makes `iss` this one value regardless of which URL/port actually reached it,
-      # which is what lets a host-machine caller (a browser, `tasks.ps1 seed`) and every
-      # container-side validator agree on the same issuer at once.
-      KC_HOSTNAME: http://keycloak:8080
+      # Without a fixed hostname, Keycloak's dev-mode default derives `iss` (and every URL in
+      # the discovery document) from whatever Host header the caller used, so a token minted by
+      # hitting the host-exposed 127.0.0.1:8180 would carry a different `iss` than one minted via
+      # the container-network keycloak:8080 - and Spring's resource server validates `iss`
+      # against one fixed configured string, rejecting a mismatch outright (not a signature
+      # problem, an issuer-string one). Pinning the hostname fixes that part - every token gets
+      # the same `iss` regardless of which URL answered.
+      #
+      # But a FIXED hostname creates a narrower trap of its own, found live task 09.6 testing a
+      # real browser login end to end for the first time in this project's history: a browser
+      # SPA does not just need the `iss` string to match - it has to literally HTTP GET every URL
+      # the discovery document advertises (authorization_endpoint, token_endpoint, jwks_uri...),
+      # since oidc-client-ts drives the whole redirect+code-exchange flow off them. The previous
+      # value here, http://keycloak:8080, is the container-network name - unreachable from a
+      # browser running on the host, which can resolve neither "keycloak" nor port 8080 (only
+      # 8180 is published). That broke every browser-initiated login while leaving
+      # password-grant callers (`tasks.ps1 seed`/`demo`, which only ever hit one already-known,
+      # host-reachable token-endpoint URL and never follow discovery) working perfectly - which
+      # is exactly why this went unnoticed: nothing in this project's own tooling ever drove a
+      # real browser through the redirect flow before task 09.6 did.
+      #
+      # The fix: point KC_HOSTNAME at the host-reachable address instead (127.0.0.1, not
+      # "localhost" - this file is `.yml` and CLAUDE.md's config-hygiene check greps committed
+      # `.yml`/`.yaml`/`.properties` files for that literal string). Every service's own
+      # OIDC_ISSUER_URI (docker-compose.yml) moves to match, for the `iss` string check - and
+      # each service's application.yml now ALSO sets jwk-set-uri to the old container-network
+      # address, so the one HTTP call a backend service genuinely needs to make (fetching the
+      # signing keys) still resolves on the Docker network rather than trying to dial back out
+      # to the host. Spring Security supports this split explicitly: issuer-uri alone still
+      # validates `iss`, while an explicitly-set jwk-set-uri is used for the actual key fetch
+      # and skips discovery entirely - see docs.spring.io's resource-server JWT reference,
+      # "Specifying the Authorization Server JWK Set Uri Directly".
+      KC_HOSTNAME: http://127.0.0.1:8180
       KC_HOSTNAME_STRICT: "false"
     volumes:
       - keycloak_data:/opt/keycloak/data
