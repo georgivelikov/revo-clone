@@ -2113,12 +2113,12 @@
       ],
       "tests": [],
       "lastInPhase": true,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.12-cross-platform-tasks-sh-alongside",
-      "commit": null,
+      "commit": "046d75c",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. Full bash/curl/jq ports of tasks.ps1 and tools/seed/seed.ps1 - same command surface, no PowerShell dependency (deliberately not a thin pwsh-calling wrapper, which would defeat a cross-platform script's point). Every command actually run live against the real stack, which surfaced and fixed four real bugs: (1) a `body=$(http_call ...)` capture runs http_call in a subshell, so a global $http_status it set internally never reached the caller - redesigned http_call to return body+status combined and split by pure non-subshell-sensitive helpers; (2) `[ cond ] && action` as a standalone statement aborts the script under `set -e` the instant cond is false (its own exit status is the false LHS's) - hit live in the `up` health-poll loop the moment every service finished becoming healthy; fixed there and two latent (never-fired) instances in seed.sh; (3) neither uuidgen nor /proc/sys/kernel/random/uuid exist on Windows/Git Bash - added a portable generate_uuid() (openssl rand -hex 16 reassembled into UUIDv4 form) plus HTTP status checks the demo function was missing entirely, which is why the broken empty Idempotency-Key went unnoticed as all-null quote fields instead of a clear error; (4) Keycloak tokens fetched once at the start can expire before seed.sh's later phases use them, against a stack still slowed by a recent down+up+analytics-rebuild - a latent gap in seed.ps1's identical design too, fixed with a refresh_tokens() call before each of the three remaining multi-step phases. shellcheck clean (fixed one real SC2034 unused-variable finding). MSYS_NO_PATHCONV=1 set in both scripts for Git-Bash-on-Windows compatibility with the /opt/kafka/... paths passed to docker exec - a no-op on real Linux/macOS. Also found and deliberately NOT fixed under this task: agent/phase-verify.ps1's topic-catalogue check has never validated anything (its --topic-literal regex can't match infra/kafka/create-topics.sh's create()-function call syntax), vacuously passing '0 of 0 declared topics' every phase since that script format was chosen - same class of finding as docs/failure-modes.md's 'gate that never actually ran'; not fixed here since turning a vacuous pass into a real check this late in the phase risks surfacing an unrelated, unbudgeted failure if the retry/DLT chain turns out genuinely incomplete on the live cluster. GATE GREEN including phase-verify.ps1 (triggered automatically, last task in phase): config hygiene 29 files/no localhost leaks, 19 containers healthy, tripwire clean, mvn clean verify green, 675 tests (no drop). Phase 9 (Polish) complete - all 12 tasks done."
     }
   ]
 }
