@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.6",
+  "current": "09.7",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -2005,12 +2005,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.6-frontend-polish-pass",
-      "commit": null,
+      "commit": "e2680b4",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively, directly on master rather than a task branch (process slip - no divergent history resulted since master was already at 09.5's tip; tagged task/09.6 at the final commit as usual). Three commits (934dd95, c734c2a, e2680b4). Forked a sub-agent for the bulk of the UI work (Skeleton/BalanceSkeleton/RowSkeletonList, EmptyState, ErrorState, CountUpMoney+useCountUp, ConnectionBanner wired to notificationSocket.ts's new connection-status reporting), applied across Home/Activity/ActivityDetail/Analytics/Card/Exchange/Vaults; its own build+lint were clean but it had no browser tools, so I did the live verification myself per CLAUDE.md's explicit requirement, against the dockerized stack logged in as alice@demo.io - which surfaced four real, previously-undiscovered bugs, none of them things the fork could have caught without a browser: (1) KC_HOSTNAME was a Docker-internal-only hostname, so the OIDC discovery document's endpoints were never browser-reachable - this had silently blocked EVERY browser login in the project's history, since tasks.ps1's seed/demo scripts only ever use direct password-grant calls and never follow discovery; fixed by pointing KC_HOSTNAME at 127.0.0.1:8180 and splitting OIDC_ISSUER_URI from a new OIDC_JWK_SET_URI across all 9 resource-server services (934dd95) - each with an empty-fallback placeholder after confirming via javap against JwkSetUriCondition.class that an unresolvable bare ${OIDC_JWK_SET_URI} throws PlaceholderResolutionException during condition evaluation itself, failing every test's context load, the same trap task 09.4 found with the service-account properties; (2) the gateway's single-origin CORS config didn't include 127.0.0.1:5173 in the realm's redirectUris/webOrigins alongside localhost, so one host convention always 403'd - fixed in revolut-realm.json; (3) GET /api/payments and GET /api/payments/{id} were documented in plans/phase-03-payments-and-ui.md's endpoint table since task 03.1, and task 03.10 explicitly depends on the poll-fallback one, but PaymentController only ever grew a @PostMapping - the Activity screen's first-ever real exercise of these endpoints hit a 500 (HttpRequestMethodNotSupported falling through common-web's generic exception handler), not a 404; implemented both properly via new PaymentQueryService (reuses payment-service's existing AccountView read model so 'mine' correctly means either side of a transfer, not just initiatorUserId) and PaymentNotFoundException, proven by 6 new tests in PaymentFeedAndPollTest (c734c2a); (4) HomeScreen's total-balance chips and the Transfer/Exchange/Card account pickers all showed the user's round-up vault alongside real wallets (GET /api/accounts/me returns both; a vault is its own backed account row) - filtered to type === 'WALLET' in all four, not at the shared hook since useVaults.ts depends on it and needs vaults included; and (5) ExchangeScreen's sellCurrency/buyCurrency useState initializers only ever saw the empty account list present at first mount and never updated once accounts loaded, making sellAccount permanently undefined and the whole setup step silently render nothing - fixed with the same adjust-state-during-render pattern CardScreen's IssueCardForm already used, after an initial attempt collided both currencies onto the same value by reading the not-yet-updated state back for the paired fallback instead of a locally resolved value (e2680b4). Full flow re-verified live after every fix. Gate green: tripwire clean, mvn clean verify green, 675 tests (previous high 669, +6 from PaymentFeedAndPollTest); one incidental GatewayRateLimitTest.burstPastTheLimitReturns429 failure on the first gate attempt, same known timing-sensitive Redis test flagged in task 08.8's notes, reproduced clean on immediate retry with no code change."
     },
     {
       "id": "09.7",
