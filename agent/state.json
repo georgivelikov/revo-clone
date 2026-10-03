@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.7",
+  "current": "09.8",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -2023,12 +2023,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.7-screenshots-for-the-readme",
-      "commit": null,
+      "commit": "1858302",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. Five PNGs in docs/screenshots/ (home, activity, exchange, card, analytics), captured live against the freshly-verified task-09.6 stack logged in as alice@demo.io, cropped from the full browser viewport down to the mobile-width content column (545-995px of 1536, full height) via Pillow so they read as phone screenshots rather than a mostly-black browser window. Exchange shows an in-flight quote (countdown ring, rate, fee) rather than the empty entry form, for a more informative screenshot. Not yet wired into the README - that's task 09.8. Gate green: tripwire clean, mvn clean verify green, 675 tests (no drop)."
     },
     {
       "id": "09.8",
