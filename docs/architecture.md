@@ -5,10 +5,13 @@ true microservices, database-per-service, event-driven choreography over Kafka, 
 double-entry ledger, sagas with compensation, and idempotency at every layer that touches
 money. Regulation and compliance are explicitly out of scope.
 
-> **This document describes a plan, not shipped code.** Nothing here is implemented yet.
-> Every box and every arrow below is traceable to a section of [`../plans/`](../plans/00-overview.md);
-> where the plans have not yet decided something, it is marked `?` and footnoted rather than
-> invented.
+> **This document describes the system as built.** Phases 00 through 08 are complete and
+> phase 09 (this one) is in progress; every box and every arrow below has been checked against
+> the actual code as of task 09.10, not just against [`../plans/`](../plans/00-overview.md).
+> Task 09.10's own verification pass found one real drift between the original plan and what
+> got built — the gateway's ledger balance read-through, added below — and resolved the one
+> open footnote from the planning era. Where something genuinely remains undecided, it is
+> marked `?` and footnoted rather than invented.
 
 **Phase badges.** Node labels carry a `P0x` badge for the phase that introduces the
 component — `P00` foundations, `P01` identity/account/gateway, `P02` ledger, `P03` payments
@@ -64,6 +67,7 @@ flowchart TB
     GW --> CARD
     GW --> ANL
     GW --> NOTIF
+    GW -->|"balance read-through · P03"| LEDG
     GW -->|"rate limit ·<br/>idempotency marker"| REDIS
 
     IDENT -->|"Admin API · breaker"| KC
@@ -107,6 +111,7 @@ below is a bug against the design:
 | Call | Why it is allowed |
 |---|---|
 | browser → gateway → `/api/**` | Routing and edge JWT validation only. Services re-validate; the edge is a fast reject, not a trust boundary |
+| `gateway → ledger` | `/api/ledger/**` rewritten to `/internal/ledger/**` - a read-through for `GET .../accounts/{id}/balance`. Every balance the web app shows comes through this route; `account-service` never caches or re-exposes it (database-per-service - balances are ledger-service's alone to answer) |
 | `payment → fx` | A cross-currency transfer needs a firm rate before the user confirms. Behind a Resilience4j circuit breaker, fallback `FX_UNAVAILABLE` |
 | `card → fx` | Foreign-currency authorization must decide in well under a second |
 | `fx → ledger`, `card → ledger` | `/internal/ledger/reservations` — hold and capture. Not routed by the gateway; service-to-service only |
@@ -182,14 +187,14 @@ flowchart LR
     T8 --> NOTIF
     T8 --> ANL
 
-    LEDG -. "LedgerAccountCreatedV1 · topic undecided [1]" .-> ACCT
+    T3 --> ACCT
 ```
 
 | Topic | Key | Parts | Cleanup | Retention | Producer → Consumers | Added |
 |---|---|---|---|---|---|---|
 | `identity.user.v1` | `userId` | 12 | compact | — | identity → account | P01 |
 | `account.account.v1` | `accountId` | 12 | compact | — | account → ledger, payment | P01 |
-| `ledger.entry.v1` | `ledgerAccountId` | 12 | delete | **`-1`** | ledger → payment, notification, analytics | P02 |
+| `ledger.entry.v1` | `ledgerAccountId` | 12 | delete | **`-1`** | ledger → payment, notification, analytics, account, fx, card [1] | P02 |
 | `payment.event.v1` | `paymentId` | 12 | delete | 30 d | payment → notification | P03 |
 | `notification.push.v1` | `userId` | 12 | delete | 7 d | analytics (budget alerts) → notification | P03 |
 | `fx.rate.tick.v1` | `pair` | 12 | delete | 1 h | simulator → fx, notification | P04 |
@@ -210,9 +215,16 @@ whole picture on startup with no backfill API and no synchronous call to the own
 taps on the same card are evaluated in order against the same limits. With random
 partitioning, two simultaneous authorizations could both pass a limit that only one should.
 
-[1]: [Phase 02](../plans/phase-02-ledger.md) task 8 has `ledger-service` publish
-`LedgerAccountCreatedV1` so `account-service` can fill in `account.ledger_account_id`, but
-does not say which topic carries it. Open decision.
+[1]: **Resolved (task 09.10).** [Phase 02](../plans/phase-02-ledger.md) task 8 has
+`ledger-service` publish `LedgerAccountCreatedV1` so `account-service` can fill in
+`account.ledger_account_id`; the plan didn't say which topic carries it, but the actual
+implementation puts it on `ledger.entry.v1` itself rather than a dedicated topic - one topic,
+multiple event types discriminated by payload shape, not a new topic for a single low-volume
+event. This is also why this topic's consumer list is longer than the saga alone would suggest:
+`account`, `fx`, `card`, `payment` and `notification` each run their own `LedgerEntryKafkaListener`
+and keep a local `LedgerAccountRef`/account-view read model keyed off `LedgerAccountCreatedV1`,
+so each can validate a ledger account id locally rather than calling `ledger-service` synchronously
+(database-per-service - §1's rule against cross-service reads applies here too).
 
 ### Retry and dead-letter chain — P07
 
