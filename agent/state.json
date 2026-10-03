@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.11",
+  "current": "09.12",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -2095,12 +2095,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.11-ci-workflow-with-caching-badge-and-the",
-      "commit": null,
+      "commit": "416c8b1",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. .github/workflows/ci.yml, three jobs: build (mvn -B clean verify, cache: maven), frontend (npm ci/build/lint in web/, cache: npm against the real package-lock.json), e2e (full docker-compose stack up, tasks.ps1 seed through the real public APIs, then the ledger zero-sum invariant query - nightly cron + workflow_dispatch only, not every push, per the phase file's own guidance that this job is too slow for that). Two deliberate deviations from the phase file's literal snippet: no spotless:check (no Spotless config exists anywhere in the multi-module build; adding one now would mean reformatting every Java file across 10 services + 5 platform modules as an undocumented side effect of a CI task) and no Playwright E2E (no Playwright config/tests exist; the seed-through-real-APIs run is this project's actual end-to-end exercise and is what the invariant check attaches to instead). Invariant query is the one docs/failure-modes.md verified correct, matching seed.ps1's own Assert-ZeroSumInvariant - not the stale query CLAUDE.md's own text still describes. e2e job uses pwsh directly (preinstalled on ubuntu-latest) rather than waiting on task 09.12's tasks.sh. README badge added with an explicit <owner>/<repo> placeholder plus an HTML-comment note, since this repo has no git remote configured and the real GitHub path isn't knowable from inside it. Workflow file not actually run on GitHub (no remote to push to) - verified only that gate.ps1 passes (tripwire, mvn verify unaffected by a docs/workflow-only change) and read the YAML carefully by hand; the e2e job's shell steps are unexercised. Gate green: tripwire clean, mvn clean verify green, 675 tests (no drop)."
     },
     {
       "id": "09.12",
