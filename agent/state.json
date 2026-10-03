@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-13",
   "note": "Generated from the `## Task list` sections of plans/phase-*.md, then owned by the harness. Oversized items are split into subtasks at each phase boundary by the decomposition pass; plans/ stays the source of truth and is never edited.",
-  "current": "09.8",
+  "current": "09.9",
   "budget": {
     "perTaskCeilingUsd": 12.0,
     "totalSpentUsd": 265.1206273,
@@ -2041,12 +2041,12 @@
       ],
       "tests": [],
       "lastInPhase": false,
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
       "branch": "task/09.8-write-the-readme",
-      "commit": null,
+      "commit": "58c54ea",
       "costUsd": 0,
-      "notes": null
+      "notes": "Done interactively. Full rewrite of the Phase-00-era scaffold README. Structure follows plans/phase-09-polish.md exactly: what-this-is with the learning-project/no-compliance line, the five task-09.7 screenshots, a three-command quick start (docker compose --profile services up -d / tasks.ps1 seed / log in as alice@demo.io), a compact architecture section (own service diagram + the transfer saga sequence diagram + port map, linking to docs/architecture.md for full depth rather than duplicating its 542 lines), seven named decisions (double-entry, outbox, partition-by-account-id, three-layer idempotency, auth holds as reservations, replayable analytics, 202-not-201) each in the alternative/choice/consequence shape with a link to its not-yet-written ADR (task 09.9 is immediately next; the six linked filenames are fixed now so they resolve once written), an honest what-I'd-do-differently section citing three real, already-documented gaps (payment-to-fx's synchronous coupling, RetryTopicRelay's backlog flaw from task 09.4, and the ledger-invariant gate that docs/failure-modes.md found had never actually run before phase 08), and pointers to docs/performance.md and docs/failure-modes.md. Tripwire initially flagged the literal `KafkaTemplate.send()` inside a decision paragraph's prose (same false-positive class as task 09.4's Jackson-annotation comment) - reworded to 'a direct broker publish'. Gate green: tripwire clean, mvn clean verify green, 675 tests (no drop)."
     },
     {
       "id": "09.9",
