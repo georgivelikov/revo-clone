@@ -47,7 +47,7 @@ public class GatewaySecurityConfig {
     private final String allowedOrigin;
 
     public GatewaySecurityConfig(RevolutSecurityProperties securityProperties,
-                                  @org.springframework.beans.factory.annotation.Value("${revolut.gateway.cors.allowed-origin:http://localhost:5173}") String allowedOrigin) {
+                                  @org.springframework.beans.factory.annotation.Value("${revolut.gateway.cors.allowed-origin}") String allowedOrigin) {
         this.securityProperties = securityProperties;
         this.allowedOrigin = allowedOrigin;
     }

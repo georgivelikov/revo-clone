@@ -51,7 +51,8 @@ services:
       FX_SERVICE_URI: http://fx-service:8085
       CARD_SERVICE_URI: http://card-service:8086
       ANALYTICS_SERVICE_URI: http://analytics-service:8087
-      CORS_ALLOWED_ORIGIN: http://127.0.0.1:5173
+      # Comma-separated: the app is reachable on either host name (Keycloak allows both too).
+      CORS_ALLOWED_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       redis:
         condition: service_healthy
@@ -216,7 +217,7 @@ services:
       # The WebSocket upgrade's CORS check is separate from HTTP CORS (the gateway's
       # CORS_ALLOWED_ORIGIN, above, covers HTTP only) - the browser connects here directly for
       # /ws rather than through the gateway, so the allowed origin has to be repeated here.
-      WS_ALLOWED_ORIGINS: http://127.0.0.1:5173
+      WS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       postgres:
         condition: service_healthy
