@@ -32,6 +32,7 @@ services:
     stop_grace_period: 35s
     ports:
       - "8080:8080"
+    env_file: [infra/web-origins.env]   # CORS_ALLOWED_ORIGIN (browser origins, both hosts)
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -51,8 +52,6 @@ services:
       FX_SERVICE_URI: http://fx-service:8085
       CARD_SERVICE_URI: http://card-service:8086
       ANALYTICS_SERVICE_URI: http://analytics-service:8087
-      # Comma-separated: the app is reachable on either host name (Keycloak allows both too).
-      CORS_ALLOWED_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       redis:
         condition: service_healthy
@@ -202,6 +201,7 @@ services:
     stop_grace_period: 35s
     ports:
       - "8088:8088"
+    env_file: [infra/web-origins.env]   # WS_ALLOWED_ORIGINS (browser origins, both hosts)
     environment:
       NOTIFICATION_DB_URL: jdbc:postgresql://postgres:5432/notification
       NOTIFICATION_DB_USER: notification
@@ -217,7 +217,6 @@ services:
       # The WebSocket upgrade's CORS check is separate from HTTP CORS (the gateway's
       # CORS_ALLOWED_ORIGIN, above, covers HTTP only) - the browser connects here directly for
       # /ws rather than through the gateway, so the allowed origin has to be repeated here.
-      WS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       postgres:
         condition: service_healthy

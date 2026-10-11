@@ -98,7 +98,7 @@ try {
     foreach ($origin in 'http://localhost:5173', 'http://127.0.0.1:5173') {
         $code = & curl.exe -s -o NUL -w '%{http_code}' -X OPTIONS 'http://127.0.0.1:8080/api/accounts/me' `
             -H "Origin: $origin" -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization'
-        if ($code -ne '200') { Die "gateway rejected CORS preflight from $origin (HTTP $code) - check CORS_ALLOWED_ORIGIN in docker-compose.yml" }
+        if ($code -ne '200') { Die "gateway rejected CORS preflight from $origin (HTTP $code) - check CORS_ALLOWED_ORIGIN in infra/web-origins.env" }
         Say "  $origin : ok"
     }
 

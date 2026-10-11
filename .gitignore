@@ -43,3 +43,7 @@ Thumbs.db
 *.log
 agent/log/
 .claude/settings.local.json
+
+# Playwright
+test-results/
+playwright-report/
