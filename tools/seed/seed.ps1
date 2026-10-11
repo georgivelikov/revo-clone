@@ -112,14 +112,18 @@ $vaultGoalMinor         = 500000L
 # own quote dedup both compare the request body's hash, not its parsed semantics) with a 422
 # "Idempotency-Key was already used for a request with a different body" on the second run -
 # found live running this script twice in separate processes, task 09.4.
+# -Compress: Windows PowerShell 5.1 and PowerShell 7 indent/space plain ConvertTo-Json output
+# differently, so the same body hashed differently depending on which shell ran the seed, and a
+# rerun from the other shell (start.ps1 vs. an interactive pwsh) hit the 422 above. Compressed
+# output is byte-identical across both (verified 5.1.26100 vs 7.6.6).
 function Invoke-JsonPost([string] $Uri, [System.Collections.Specialized.OrderedDictionary] $Body, [hashtable] $Headers) {
     Invoke-RestMethod -Method Post -Uri $Uri -ContentType 'application/json' `
-        -Body ($Body | ConvertTo-Json) -Headers $Headers
+        -Body ($Body | ConvertTo-Json -Compress) -Headers $Headers
 }
 
 function Invoke-JsonPut([string] $Uri, [System.Collections.Specialized.OrderedDictionary] $Body, [hashtable] $Headers) {
     Invoke-RestMethod -Method Put -Uri $Uri -ContentType 'application/json' `
-        -Body ($Body | ConvertTo-Json) -Headers $Headers
+        -Body ($Body | ConvertTo-Json -Compress) -Headers $Headers
 }
 
 function Get-HttpStatus($errorRecord) {
@@ -261,7 +265,7 @@ function Invoke-SeedHistoryFor([hashtable] $AuthHeader, [System.Guid] $CardId) {
     }
     Say "    submitting a $historyBatchCount-authorization spend batch on card $CardId..."
     Invoke-RestMethod -Method Post -Uri "$simulatorBase/simulator/cards/spend/batch?count=$historyBatchCount" `
-        -ContentType 'application/json' -Body (@{ cardId = $CardId } | ConvertTo-Json) | Out-Null
+        -ContentType 'application/json' -Body (@{ cardId = $CardId } | ConvertTo-Json -Compress) | Out-Null
     Say '    advancing the simulator clock so the batch settles...'
     for ($i = 0; $i -lt $historyAdvanceDayCount; $i++) {
         Invoke-RestMethod -Method Post -Uri "$simulatorBase/simulator/clock/advance-day" | Out-Null
