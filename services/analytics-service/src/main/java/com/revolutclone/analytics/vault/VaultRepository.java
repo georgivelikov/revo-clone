@@ -11,4 +11,6 @@ public interface VaultRepository extends JpaRepository<Vault, UUID> {
 
     /** A 404, never a 403, for another user's vault - see {@link VaultNotFoundException}. */
     Optional<Vault> findByIdAndUserId(UUID id, UUID userId);
+
+    boolean existsByAccountId(UUID accountId);
 }

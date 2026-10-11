@@ -26,10 +26,27 @@ public class VaultService {
 
     public Vault create(UUID userId, String name, String currency, Long goalMinor, boolean roundupEnabled,
             UUID roundupSourceCardId) {
-        UUID accountId = accountOpener.open(userId, currency, name);
+        UUID accountId = openOrAdopt(userId, currency, name);
         Vault vault = new Vault(UUID.randomUUID(), userId, accountId, name, currency, goalMinor, roundupEnabled,
                 roundupSourceCardId);
         return vaults.save(vault);
+    }
+
+    /**
+     * A 409 from account-service means the account exists. If a local vault already owns it, that
+     * is a real duplicate and stays a 409. If none does, an earlier create opened the account and
+     * failed before the local insert - adopt it rather than strand the name forever.
+     */
+    private UUID openOrAdopt(UUID userId, String currency, String name) {
+        try {
+            return accountOpener.open(userId, currency, name);
+        } catch (DuplicateVaultAccountException duplicate) {
+            UUID existing = accountOpener.findExisting(userId, currency, name).orElseThrow(() -> duplicate);
+            if (vaults.existsByAccountId(existing)) {
+                throw duplicate;
+            }
+            return existing;
+        }
     }
 
     @Transactional(readOnly = true)

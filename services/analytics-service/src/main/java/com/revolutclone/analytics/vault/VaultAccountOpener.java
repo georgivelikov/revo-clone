@@ -1,5 +1,6 @@
 package com.revolutclone.analytics.vault;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -23,4 +24,13 @@ public interface VaultAccountOpener {
      *         answered with a server error
      */
     UUID open(UUID userId, String currency, String name);
+
+    /**
+     * The id of the VAULT account account-service already holds for exactly this user, currency
+     * and name, if any. Used to recover when {@link #open} 409s because an earlier attempt opened
+     * the account but never recorded the local vault row.
+     */
+    default Optional<UUID> findExisting(UUID userId, String currency, String name) {
+        return Optional.empty();
+    }
 }

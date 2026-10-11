@@ -174,4 +174,29 @@ class VaultTransferTest {
         assertThat(updated.getCurrency()).isEqualTo("EUR");
         assertThat(updated.getAccountId()).isEqualTo(vault.getAccountId());
     }
+
+    @Test
+    void createAdoptsAnAccountOpenedEarlierWhoseLocalRowWasNeverWritten() {
+        // account-service already has the VAULT account (remote open succeeded, local insert did
+        // not), so open() 409s. Without adoption that name is unusable and the vault never shows.
+        UUID userId = UUID.randomUUID();
+        UUID orphanedAccountId = UUID.randomUUID();
+        accountOpener.seedExisting(userId, "EUR", "Seed round-up vault", orphanedAccountId);
+
+        Vault vault = vaultService.create(userId, "Seed round-up vault", "EUR", 500_000L, true, null);
+
+        assertThat(vault.getAccountId()).isEqualTo(orphanedAccountId);
+        assertThat(vaultService.list(userId)).extracting(Vault::getAccountId).containsExactly(orphanedAccountId);
+    }
+
+    @Test
+    void createStillConflictsWhenTheExistingAccountAlreadyHasAVault() {
+        UUID userId = UUID.randomUUID();
+        Vault first = vaultService.create(userId, "Holiday", "EUR", null, false, null);
+        accountOpener.seedExisting(userId, "EUR", "Holiday", first.getAccountId());
+
+        assertThatThrownBy(() -> vaultService.create(userId, "Holiday", "EUR", null, false, null))
+                .isInstanceOf(DuplicateVaultAccountException.class);
+        assertThat(vaultService.list(userId)).hasSize(1);
+    }
 }

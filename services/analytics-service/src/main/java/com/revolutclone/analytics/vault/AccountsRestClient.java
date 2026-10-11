@@ -3,6 +3,7 @@ package com.revolutclone.analytics.vault;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -64,6 +65,34 @@ public class AccountsRestClient implements VaultAccountOpener {
         } catch (ResourceAccessException ex) {
             throw new AccountServiceUnavailableException(
                     "could not reach account-service to open a vault account: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    public Optional<UUID> findExisting(UUID userId, String currency, String name) {
+        try {
+            Response response = http.get()
+                    .uri(uri -> uri.path(PATH)
+                            .queryParam("userId", userId)
+                            .queryParam("currency", currency)
+                            .queryParam("name", name)
+                            .build())
+                    .retrieve()
+                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(),
+                            (request, resp) -> {
+                                // handled below as "no such account"
+                            })
+                    .onStatus(HttpStatusCode::isError,
+                            (request, resp) -> {
+                                throw new AccountServiceUnavailableException(
+                                        "account-service answered " + resp.getStatusCode()
+                                                + " looking up a vault account: " + bodyOf(resp));
+                            })
+                    .body(Response.class);
+            return Optional.ofNullable(response).map(Response::id);
+        } catch (ResourceAccessException ex) {
+            throw new AccountServiceUnavailableException(
+                    "could not reach account-service to look up a vault account: " + ex.getMessage());
         }
     }
 

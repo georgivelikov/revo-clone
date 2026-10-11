@@ -14,6 +14,9 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     Optional<Account> findByIdAndUserId(UUID id, UUID userId);
 
+    /** The exact tuple behind {@code unique(user_id, currency, type, name)} - at most one row. */
+    Optional<Account> findByUserIdAndCurrencyAndTypeAndName(UUID userId, String currency, AccountType type, String name);
+
     /**
      * Fills in the one column {@link Account} gets after it is first inserted -
      * plans/phase-01-identity-account-gateway.md: "Filled in by Phase 02 once the ledger

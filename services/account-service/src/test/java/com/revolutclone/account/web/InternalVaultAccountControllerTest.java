@@ -1,5 +1,6 @@
 package com.revolutclone.account.web;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -97,5 +98,29 @@ class InternalVaultAccountControllerTest {
                 .andExpect(status().isCreated());
 
         org.assertj.core.api.Assertions.assertThat(accounts.findByUserId(userId)).hasSize(2);
+    }
+
+    @Test
+    void anExistingVaultAccountCanBeLookedUpByUserCurrencyAndNameWithNoJwt() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String created = mockMvc.perform(post("/internal/accounts/vaults")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + userId + "\",\"currency\":\"EUR\",\"name\":\"Holiday\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String accountId = com.jayway.jsonpath.JsonPath.read(created, "$.id");
+
+        mockMvc.perform(get("/internal/accounts/vaults")
+                        .param("userId", userId.toString()).param("currency", "eur").param("name", "Holiday"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(accountId))
+                .andExpect(jsonPath("$.type").value("VAULT"));
+    }
+
+    @Test
+    void lookingUpAVaultAccountThatDoesNotExistIsNotFound() throws Exception {
+        mockMvc.perform(get("/internal/accounts/vaults")
+                        .param("userId", UUID.randomUUID().toString()).param("currency", "EUR").param("name", "Nope"))
+                .andExpect(status().isNotFound());
     }
 }
