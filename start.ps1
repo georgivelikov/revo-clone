@@ -91,6 +91,17 @@ try {
         if ($LASTEXITCODE -ne 0) { Die 'seeding failed' }
     }
 
+    # "Healthy" only means each JVM is up. The browser needs the gateway to accept its page origin
+    # (localhost AND 127.0.0.1 - README sends people to localhost) or login works and the first
+    # API call dies on CORS. curl.exe ships with Windows and behaves the same under 5.1 and 7.
+    Say 'checking browser origins against the gateway CORS policy...'
+    foreach ($origin in 'http://localhost:5173', 'http://127.0.0.1:5173') {
+        $code = & curl.exe -s -o NUL -w '%{http_code}' -X OPTIONS 'http://127.0.0.1:8080/api/accounts/me' `
+            -H "Origin: $origin" -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization'
+        if ($code -ne '200') { Die "gateway rejected CORS preflight from $origin (HTTP $code) - check CORS_ALLOWED_ORIGIN in docker-compose.yml" }
+        Say "  $origin : ok"
+    }
+
     Write-Host ''
     Say 'READY'
     Say '  App        http://localhost:5173   (alice@demo.io / demo)'

@@ -6,7 +6,7 @@ bottom tab bar - see `plans/phase-03-payments-and-ui.md` for the design spec.
 ## Local dev
 
 ```bash
-cp .env.example .env.local   # values already match docker-compose.infra.yml defaults
+cp .env.example .env.local   # Keycloak authority must stay on 127.0.0.1 (its pinned issuer); see the comments in the file
 npm install
 npm run dev                  # http://localhost:5173
 ```
